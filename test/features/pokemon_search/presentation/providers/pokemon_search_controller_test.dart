@@ -4,9 +4,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_detail.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_list_item.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/domain/repositories/pokemon_repository.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/pokemon_repository.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_controller.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
@@ -17,12 +16,9 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 
 /// Pre-built list items used across tests.
 final _items = [
-  const PokemonListItem(
-      id: 1, name: 'bulbasaur', spriteUrl: '', primaryType: 'grass'),
-  const PokemonListItem(
-      id: 4, name: 'charmander', spriteUrl: '', primaryType: 'fire'),
-  const PokemonListItem(
-      id: 7, name: 'squirtle', spriteUrl: '', primaryType: 'water'),
+  const PokemonSummary(id: 1, name: 'bulbasaur', spriteUrl: ''),
+  const PokemonSummary(id: 4, name: 'charmander', spriteUrl: ''),
+  const PokemonSummary(id: 7, name: 'squirtle', spriteUrl: ''),
 ];
 
 /// Repository that returns the fixture list and delegates [searchPokemon]
@@ -32,13 +28,13 @@ class _FakeRepository implements PokemonRepository {
   int getPokemonListCallCount = 0;
 
   @override
-  Future<List<PokemonListItem>> getPokemonList({int limit = 151}) async {
+  Future<List<PokemonSummary>> getPokemonList({int limit = 151}) async {
     getPokemonListCallCount++;
     return _items;
   }
 
   @override
-  Future<List<PokemonListItem>> searchPokemon(String query) async {
+  Future<List<PokemonSummary>> searchPokemon(String query) async {
     /// Delegate to getPokemonList so caching tests still work.
     final all = await getPokemonList();
     if (query.isEmpty) return all;
@@ -55,12 +51,12 @@ class _FakeRepository implements PokemonRepository {
 /// Repository that always throws a [NetworkException] on [getPokemonList].
 class _ErrorRepository implements PokemonRepository {
   @override
-  Future<List<PokemonListItem>> getPokemonList({int limit = 151}) async {
+  Future<List<PokemonSummary>> getPokemonList({int limit = 151}) async {
     throw const NetworkException('no internet');
   }
 
   @override
-  Future<List<PokemonListItem>> searchPokemon(String query) async {
+  Future<List<PokemonSummary>> searchPokemon(String query) async {
     throw const NetworkException('no internet');
   }
 
@@ -76,11 +72,9 @@ class _ErrorRepository implements PokemonRepository {
 
 /// Creates a [PokemonSearchController] inside a [ProviderContainer] so
 /// Riverpod's lifecycle management still applies.
-/// Returns (container, controller, initialState) tuple-like map via callback.
 PokemonSearchController _makeController(
     PokemonRepository fakeRepo, ProviderContainer container) {
-  return container
-      .read(pokemonSearchControllerProvider.notifier);
+  return container.read(pokemonSearchControllerProvider.notifier);
 }
 
 ProviderContainer _makeContainer(PokemonRepository fakeRepo) {
@@ -117,7 +111,8 @@ void main() {
       addTearDown(container.dispose);
 
       /// Wait for init to complete.
-      final controller = container.read(pokemonSearchControllerProvider.notifier);
+      final controller =
+          container.read(pokemonSearchControllerProvider.notifier);
       await controller.init();
 
       final state = container.read(pokemonSearchControllerProvider);
@@ -256,12 +251,12 @@ void main() {
 /// Repository that always throws [ServerException] 404.
 class _ServerErrorRepository implements PokemonRepository {
   @override
-  Future<List<PokemonListItem>> getPokemonList({int limit = 151}) async {
+  Future<List<PokemonSummary>> getPokemonList({int limit = 151}) async {
     throw const ServerException(statusCode: 404, message: 'not found');
   }
 
   @override
-  Future<List<PokemonListItem>> searchPokemon(String query) async {
+  Future<List<PokemonSummary>> searchPokemon(String query) async {
     throw const ServerException(statusCode: 404, message: 'not found');
   }
 

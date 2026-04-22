@@ -1,14 +1,13 @@
 /// A single row in the Pokémon search list.
-/// Shows the sprite thumbnail, dex number, name, and primary type chip.
+/// Shows the sprite thumbnail, name, and dex number.
 import 'package:flutter/material.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_list_item.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_type_chip.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
-/// Stateless card row for one [PokemonListItem].
+/// Stateless card row for one [PokemonSummary].
 /// Pure UI — no state, no providers.
 class PokemonListTile extends StatelessWidget {
   /// The Pokémon data to display.
-  final PokemonListItem item;
+  final PokemonSummary item;
 
   /// Creates a [PokemonListTile] for [item].
   const PokemonListTile({super.key, required this.item});
@@ -33,21 +32,15 @@ class PokemonListTile extends StatelessWidget {
                 const Icon(Icons.broken_image_outlined),
           ),
         ),
-        /// Pokédex number in subdued text above the name.
+        /// Title-cased display name.
         title: Text(
           _displayName(item.name),
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        /// Primary type chip + dex number on the same row.
-        subtitle: Row(
-          children: [
-            PokemonTypeChip(typeName: item.primaryType),
-            const SizedBox(width: 8),
-            Text(
-              '#${item.id.toString().padLeft(3, '0')}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+        /// Dex number in subdued text.
+        subtitle: Text(
+          '#${item.id.toString().padLeft(3, '0')}',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ),
     );

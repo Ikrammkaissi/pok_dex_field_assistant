@@ -1,8 +1,8 @@
-/// Unit tests for [PokemonListItemModel.fromJson] and [toEntity].
+/// Unit tests for [PokemonSummary.fromJson].
 /// All tests use static JSON maps — no network or Flutter dependencies.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_list_item_model.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
 void main() {
   /// Minimal valid JSON matching the shape of a `/pokemon/{name}` response.
@@ -10,40 +10,16 @@ void main() {
     'id': 1,
     'name': 'bulbasaur',
     'sprites': {'front_default': 'https://example.com/1.png'},
-    'types': [
-      {
-        'type': {'name': 'grass'}
-      }
-    ],
   };
 
-  group('PokemonListItemModel.fromJson', () {
+  group('PokemonSummary.fromJson', () {
     /// Happy-path: all required fields present with correct types.
     test('parses valid JSON correctly', () {
-      final model = PokemonListItemModel.fromJson(validJson);
+      final model = PokemonSummary.fromJson(validJson);
 
       expect(model.id, 1);
       expect(model.name, 'bulbasaur');
       expect(model.spriteUrl, 'https://example.com/1.png');
-      expect(model.primaryType, 'grass');
-    });
-
-    /// The first type in the array is always the primary type (slot 1).
-    test('uses first type as primaryType when multiple types present', () {
-      final json = <String, dynamic>{
-        ...validJson,
-        'types': [
-          {
-            'type': {'name': 'fire'}
-          },
-          {
-            'type': {'name': 'flying'}
-          },
-        ],
-      };
-      final model = PokemonListItemModel.fromJson(json);
-
-      expect(model.primaryType, 'fire');
     });
 
     /// PokéAPI returns null for `front_default` on some alternate forms.
@@ -52,7 +28,7 @@ void main() {
         ...validJson,
         'sprites': {'front_default': null},
       };
-      final model = PokemonListItemModel.fromJson(json);
+      final model = PokemonSummary.fromJson(json);
 
       expect(model.spriteUrl, '');
     });
@@ -62,17 +38,7 @@ void main() {
       final json = Map<String, dynamic>.from(validJson)..remove('id');
 
       expect(
-        () => PokemonListItemModel.fromJson(json),
-        throwsA(isA<ParseException>()),
-      );
-    });
-
-    /// Missing types array means we cannot determine the primary type.
-    test('throws ParseException when types is missing', () {
-      final json = Map<String, dynamic>.from(validJson)..remove('types');
-
-      expect(
-        () => PokemonListItemModel.fromJson(json),
+        () => PokemonSummary.fromJson(json),
         throwsA(isA<ParseException>()),
       );
     });
@@ -82,22 +48,19 @@ void main() {
       final json = <String, dynamic>{...validJson, 'id': 'not-an-int'};
 
       expect(
-        () => PokemonListItemModel.fromJson(json),
+        () => PokemonSummary.fromJson(json),
         throwsA(isA<ParseException>()),
       );
     });
-  });
 
-  group('PokemonListItemModel.toEntity', () {
-    /// The entity should mirror all model fields exactly.
-    test('converts to PokemonListItem with matching fields', () {
-      final model = PokemonListItemModel.fromJson(validJson);
-      final entity = model.toEntity();
+    /// Missing sprites key should throw ParseException.
+    test('throws ParseException when sprites is missing', () {
+      final json = Map<String, dynamic>.from(validJson)..remove('sprites');
 
-      expect(entity.id, model.id);
-      expect(entity.name, model.name);
-      expect(entity.spriteUrl, model.spriteUrl);
-      expect(entity.primaryType, model.primaryType);
+      expect(
+        () => PokemonSummary.fromJson(json),
+        throwsA(isA<ParseException>()),
+      );
     });
   });
 }

@@ -46,18 +46,8 @@ import 'package:logger/logger.dart';
 class AppLogger {
   /// Private singleton [Logger] — configured once at startup.
   static final Logger _logger = Logger(
-    /// Pretty multi-line output in debug; compact single-line in release.
-    printer: kDebugMode
-        ? PrettyPrinter(
-            /// 0 stack frames on routine logs keeps output concise.
-            methodCount: 0,
-            /// 8 frames on errors — enough to locate the call site.
-            errorMethodCount: 8,
-            lineLength: 100,
-            colors: true,
-            printEmojis: true,
-          )
-        : SimplePrinter(printTime: true, colors: false),
+    /// Simple single-line output.
+    printer: SimplePrinter(colors: true),
     /// Fan out to multiple sinks; add remote outputs here in future.
     output: _buildOutput(),
     /// Debug: show everything. Release: only warnings and above.

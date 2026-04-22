@@ -1,8 +1,8 @@
-/// Unit tests for [PokemonDetailModel.fromJson] and [toEntity].
+/// Unit tests for [PokemonDetail.fromJson].
 /// All tests use static JSON maps — no network or Flutter dependencies.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_detail_model.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
 void main() {
   /// Valid JSON matching the abbreviated shape of a `/pokemon/{name}` response.
@@ -40,10 +40,10 @@ void main() {
     ],
   };
 
-  group('PokemonDetailModel.fromJson', () {
+  group('PokemonDetail.fromJson', () {
     /// Happy-path: all required fields present.
     test('parses valid JSON correctly', () {
-      final model = PokemonDetailModel.fromJson(validJson);
+      final model = PokemonDetail.fromJson(validJson);
 
       expect(model.id, 6);
       expect(model.name, 'charizard');
@@ -65,7 +65,7 @@ void main() {
           }
         ],
       };
-      final model = PokemonDetailModel.fromJson(json);
+      final model = PokemonDetail.fromJson(json);
 
       expect(model.types, ['psychic']);
     });
@@ -76,14 +76,14 @@ void main() {
         ...validJson,
         'sprites': {'front_default': null},
       };
-      final model = PokemonDetailModel.fromJson(json);
+      final model = PokemonDetail.fromJson(json);
 
       expect(model.spriteUrl, '');
     });
 
     /// Stat map should contain exactly the entries from the JSON array.
     test('builds stats map with correct values', () {
-      final model = PokemonDetailModel.fromJson(validJson);
+      final model = PokemonDetail.fromJson(validJson);
 
       expect(model.stats['hp'], 78);
       expect(model.stats['attack'], 84);
@@ -95,7 +95,7 @@ void main() {
       final json = Map<String, dynamic>.from(validJson)..remove('height');
 
       expect(
-        () => PokemonDetailModel.fromJson(json),
+        () => PokemonDetail.fromJson(json),
         throwsA(isA<ParseException>()),
       );
     });
@@ -105,7 +105,7 @@ void main() {
       final json = <String, dynamic>{...validJson, 'types': 'not-a-list'};
 
       expect(
-        () => PokemonDetailModel.fromJson(json),
+        () => PokemonDetail.fromJson(json),
         throwsA(isA<ParseException>()),
       );
     });
@@ -115,26 +115,9 @@ void main() {
       final json = Map<String, dynamic>.from(validJson)..remove('stats');
 
       expect(
-        () => PokemonDetailModel.fromJson(json),
+        () => PokemonDetail.fromJson(json),
         throwsA(isA<ParseException>()),
       );
-    });
-  });
-
-  group('PokemonDetailModel.toEntity', () {
-    /// Entity should mirror all model fields exactly.
-    test('converts to PokemonDetail with matching fields', () {
-      final model = PokemonDetailModel.fromJson(validJson);
-      final entity = model.toEntity();
-
-      expect(entity.id, model.id);
-      expect(entity.name, model.name);
-      expect(entity.spriteUrl, model.spriteUrl);
-      expect(entity.types, model.types);
-      expect(entity.height, model.height);
-      expect(entity.weight, model.weight);
-      expect(entity.abilities, model.abilities);
-      expect(entity.stats, model.stats);
     });
   });
 }

@@ -4,7 +4,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/domain/repositories/pokemon_repository.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/pokemon_repository.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 
 /// Manages [PokemonSearchState] in response to user interactions.

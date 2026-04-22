@@ -34,7 +34,7 @@ class PokeApiHttpClient {
   Future<Map<String, dynamic>> get(String path) async {
     /// Build the full URI by appending path to the base URL.
     final uri = Uri.parse('$_baseUrl$path');
-    AppLogger.debug(_tag, 'GET $uri');
+  //  AppLogger.debug(_tag, 'GET $uri');
 
     try {
       /// Send request — SocketException propagates on network failure.
@@ -42,7 +42,7 @@ class PokeApiHttpClient {
 
       /// Treat any 2xx status code as success.
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        AppLogger.debug(_tag, '${response.statusCode} OK — $path');
+       AppLogger.debug(_tag, '${response.statusCode} OK — $path');
         return _decodeBody(response.body, path);
       }
 

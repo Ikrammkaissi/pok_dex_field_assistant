@@ -4,9 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/app/app.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_detail.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_list_item.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/domain/repositories/pokemon_repository.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/pokemon_repository.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -16,16 +15,15 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 /// In-memory fake used by widget tests to avoid real network access.
 class _FakeRepository implements PokemonRepository {
   @override
-  Future<List<PokemonListItem>> getPokemonList({int limit = 151}) async =>
+  Future<List<PokemonSummary>> getPokemonList({int limit = 151}) async =>
       const [
-        PokemonListItem(
-            id: 1, name: 'bulbasaur', spriteUrl: '', primaryType: 'grass'),
-        PokemonListItem(
-            id: 4, name: 'charmander', spriteUrl: '', primaryType: 'fire'),
+        PokemonSummary(id: 1, name: 'bulbasaur', spriteUrl: ''),
+        PokemonSummary(id: 4, name: 'charmander', spriteUrl: ''),
       ];
 
   @override
-  Future<List<PokemonListItem>> searchPokemon(String query) async {
+  Future<List<PokemonSummary>> searchPokemon(String query) async {
+    /// Delegate to getPokemonList and filter client-side.
     final all = await getPokemonList();
     if (query.isEmpty) return all;
     return all

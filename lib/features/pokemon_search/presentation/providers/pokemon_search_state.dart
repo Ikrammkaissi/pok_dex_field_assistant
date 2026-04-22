@@ -1,11 +1,11 @@
 /// Immutable state for the Pokémon search screen.
 /// All mutations go through [PokemonSearchController.copyWith] — never mutated in place.
-import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_list_item.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
 /// Represents every possible state the search screen can be in.
 class PokemonSearchState {
   /// The Pokémon rows currently displayed (filtered or full list).
-  final List<PokemonListItem> items;
+  final List<PokemonSummary> items;
 
   /// True while an async operation (initial load or search) is in progress.
   final bool isLoading;
@@ -34,7 +34,7 @@ class PokemonSearchState {
   /// Returns a copy of this state with the specified fields replaced.
   /// Pass [clearError] to explicitly reset [error] to null.
   PokemonSearchState copyWith({
-    List<PokemonListItem>? items,
+    List<PokemonSummary>? items,
     bool? isLoading,
     String? error,
     String? query,
