@@ -3,12 +3,16 @@
 /// talks to the repository directly.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
+import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/domain/repositories/pokemon_repository.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 
 /// Manages [PokemonSearchState] in response to user interactions.
 /// Starts the initial load automatically on construction.
 class PokemonSearchController extends StateNotifier<PokemonSearchState> {
+  /// Logger tag for this class.
+  static const _tag = 'SearchController';
+
   /// Repository injected by the Riverpod provider — mockable in tests.
   final PokemonRepository _repository;
 
@@ -21,14 +25,17 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   /// Loads the first 100 Pokémon and stores them in state.
   /// Called automatically on construction and by [retry].
   Future<void> init() async {
+    AppLogger.debug(_tag, 'init — loading first 100 Pokémon');
     /// Show loading spinner; clear any previous error.
     state = state.copyWith(isLoading: true, clearError: true, query: '');
     try {
       /// Fetch enriched list (name + type + sprite) for 100 Pokémon.
       final items = await _repository.getPokemonList(limit: 100);
+      AppLogger.info(_tag, 'init complete — ${items.length} items loaded');
       state = state.copyWith(items: items, isLoading: false);
-    } catch (e) {
-      /// Map typed exceptions to user-readable messages.
+    } catch (e, s) {
+      /// Map typed exceptions to user-readable messages; log full detail here.
+      AppLogger.error(_tag, 'init failed', error: e, stackTrace: s);
       state = state.copyWith(
         isLoading: false,
         error: _errorMessage(e),
@@ -39,22 +46,29 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   /// Filters the cached list by [query] and updates state.
   /// Called by the search bar's onChanged callback.
   Future<void> search(String query) async {
+    AppLogger.debug(_tag, 'search — query: "$query"');
     /// Update the query field so the UI can reflect it.
     state = state.copyWith(query: query, isLoading: true, clearError: true);
     try {
       /// Repository filters client-side — no extra HTTP calls.
       final items = await _repository.searchPokemon(query);
       state = state.copyWith(items: items, isLoading: false);
-    } catch (e) {
+    } catch (e, s) {
+      AppLogger.error(_tag, 'search failed for "$query"',
+          error: e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: _errorMessage(e));
     }
   }
 
   /// Resets to the initial state and re-runs [init].
   /// Exposed so the error screen can show a Retry button.
-  Future<void> retry() => init();
+  Future<void> retry() {
+    AppLogger.info(_tag, 'retry triggered');
+    return init();
+  }
 
   /// Translates typed exceptions into short user-facing strings.
+  /// Full details are in the logs; the UI gets a clean message only.
   String _errorMessage(Object e) {
     if (e is NetworkException) return 'No internet connection.';
     if (e is ServerException) return 'Server error (${e.statusCode}).';

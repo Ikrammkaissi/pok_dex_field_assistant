@@ -44,6 +44,11 @@ dependencies:
   # HTTP client — injected so tests can substitute a fake.
   http: ^1.2.2
 
+  # Structured logging with level filtering and pluggable outputs.
+  # Chosen over dart:developer because it supports runtime level control,
+  # pretty-printing in debug, and a LogOutput interface for remote sinks.
+  logger: ^2.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,6 +1,7 @@
 /// Concrete implementation of [PokemonRepository].
 /// Holds an in-memory cache of the enriched Pokémon list so search queries
 /// never trigger additional HTTP calls after the first load.
+import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/datasources/pokemon_remote_datasource.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_detail.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_list_item.dart';
@@ -8,6 +9,9 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/domain/repositor
 
 /// Implements [PokemonRepository] with network calls and an in-memory cache.
 class PokemonRepositoryImpl implements PokemonRepository {
+  /// Logger tag for this class.
+  static const _tag = 'PokemonRepository';
+
   /// Remote data source for raw API calls — injected for testability.
   final PokemonRemoteDatasource _datasource;
 
@@ -23,13 +27,25 @@ class PokemonRepositoryImpl implements PokemonRepository {
   @override
   Future<List<PokemonListItem>> getPokemonList({int limit = 151}) async {
     /// Return immediately if the cache is already populated.
-    if (_cache != null) return _cache!;
+    if (_cache != null) {
+      AppLogger.debug(_tag, 'Cache hit — returning ${_cache!.length} items');
+      return _cache!;
+    }
 
-    /// Fetch enriched list: one list call + parallel detail calls.
-    final models = await _datasource.fetchEnrichedList(limit);
-    /// Convert DTOs to domain entities and store in cache.
-    _cache = models.map((m) => m.toEntity()).toList();
-    return _cache!;
+    AppLogger.info(_tag, 'Cache miss — fetching $limit Pokémon from network');
+    try {
+      /// Fetch enriched list: one list call + parallel detail calls.
+      final models = await _datasource.fetchEnrichedList(limit);
+      /// Convert DTOs to domain entities and store in cache.
+      _cache = models.map((m) => m.toEntity()).toList();
+      AppLogger.info(_tag, 'Loaded ${_cache!.length} Pokémon into cache');
+      return _cache!;
+    } catch (e, s) {
+      /// Log unexpected failures before propagating — callers handle recovery.
+      AppLogger.error(_tag, 'Failed to load Pokémon list',
+          error: e, stackTrace: s);
+      rethrow;
+    }
   }
 
   /// Filters the cached list to entries whose name contains [query].
@@ -45,15 +61,25 @@ class PokemonRepositoryImpl implements PokemonRepository {
     /// Lowercase the query once rather than per-iteration.
     final lower = query.toLowerCase();
     /// Filter by substring match on the Pokémon name.
-    return list.where((p) => p.name.contains(lower)).toList();
+    final results = list.where((p) => p.name.contains(lower)).toList();
+    AppLogger.debug(_tag,
+        'Search "$query" → ${results.length} result(s)');
+    return results;
   }
 
   /// Fetches full detail for [nameOrId] directly from the network.
   /// No caching — detail screens are opened infrequently.
   @override
   Future<PokemonDetail> getPokemonDetail(String nameOrId) async {
-    /// Delegate to the datasource and convert the DTO to a domain entity.
-    final model = await _datasource.fetchPokemonDetail(nameOrId);
-    return model.toEntity();
+    AppLogger.debug(_tag, 'Fetching detail for "$nameOrId"');
+    try {
+      /// Delegate to the datasource and convert the DTO to a domain entity.
+      final model = await _datasource.fetchPokemonDetail(nameOrId);
+      return model.toEntity();
+    } catch (e, s) {
+      AppLogger.error(_tag, 'Failed to fetch detail for "$nameOrId"',
+          error: e, stackTrace: s);
+      rethrow;
+    }
   }
 }
