@@ -10,11 +10,9 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
 
 /// Pixels from list edge (top or bottom) at which the next page is triggered.
-const _scrollThreshold = 300.0;
+/// 500px gives enough runway to fetch and render before the user hits the edge.
+const _scrollThreshold = 1000.0;
 
-/// Estimated height of one [PokemonListTile] in logical pixels.
-/// Used to compensate scroll position after items are prepended.
-const _estimatedItemHeight = 80.0;
 
 /// Root search screen widget — reads [pokemonSearchControllerProvider].
 /// Uses [ConsumerStatefulWidget] to manage the [TextEditingController] and
@@ -70,29 +68,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(pokemonSearchControllerProvider);
     final controller = ref.read(pokemonSearchControllerProvider.notifier);
-
-    /// Compensate scroll position whenever the window shifts in either direction
-    /// so the viewport stays on the same items after items are added or dropped.
-    ///
-    /// offsetDelta > 0 → leading items dropped (loadMore overflow):
-    ///   remaining items moved up → subtract to keep viewport on same row.
-    /// offsetDelta < 0 → items prepended (loadPrevious):
-    ///   all items shifted down → add to keep viewport on same row.
-    ///
-    /// Unified formula: jumpTo(offset - offsetDelta × itemHeight).
-    ref.listen<PokemonSearchState>(pokemonSearchControllerProvider,
-        (prev, next) {
-      if (prev == null) return;
-      final offsetDelta = next.windowStartOffset - prev.windowStartOffset;
-      if (offsetDelta == 0) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.jumpTo(
-            _scrollController.offset - offsetDelta * _estimatedItemHeight,
-          );
-        }
-      });
-    });
 
     return Scaffold(
       appBar: AppBar(

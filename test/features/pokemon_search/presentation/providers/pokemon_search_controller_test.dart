@@ -66,6 +66,39 @@ class _MultiPageRepository implements PokemonRepository {
       throw UnimplementedError();
 }
 
+/// Two-page repo for search auto-fetch tests.
+/// Page 0: 95 common items + 5 rare items named "rare-N".
+/// Page 1: 82 common items + 18 rare items named "rare-N". No more pages.
+/// Querying "rare" yields 5 on page 0 (below _minSearchResults=20) →
+/// auto-fetch loads page 1 → total 23 rare items → auto-fetch stops.
+class _SparseSearchRepository implements PokemonRepository {
+  static final _page0 = <PokemonSummary>[
+    ..._fakeItems(1, 95),
+    ...List.generate(5,
+        (i) => PokemonSummary(id: 900 + i, name: 'rare-${900 + i}', spriteUrl: '')),
+  ];
+  static final _page1 = <PokemonSummary>[
+    ..._fakeItems(101, 82),
+    ...List.generate(18,
+        (i) => PokemonSummary(id: 950 + i, name: 'rare-${950 + i}', spriteUrl: '')),
+  ];
+
+  int callCount = 0;
+
+  @override
+  Future<PokemonListPage> getPokemonList(
+      {int limit = 100, int offset = 0}) async {
+    callCount++;
+    if (offset == 0) return PokemonListPage(items: _page0, hasMore: true);
+    if (offset == 100) return PokemonListPage(items: _page1, hasMore: false);
+    return PokemonListPage(items: [], hasMore: false);
+  }
+
+  @override
+  Future<PokemonDetail> getPokemonDetail(String nameOrId) =>
+      throw UnimplementedError();
+}
+
 /// Always throws [NetworkException].
 class _ErrorRepository implements PokemonRepository {
   @override
@@ -317,15 +350,88 @@ void main() {
       await controller.search('');
       expect(container.read(pokemonSearchControllerProvider).items.length, 5);
     });
+  });
 
-    test('loadMore no-op while query is active', () async {
-      await controller.search('char');
-      final sizeBefore =
-          container.read(pokemonSearchControllerProvider).items.length;
-      await controller.loadMore();
-      expect(
-          container.read(pokemonSearchControllerProvider).items.length,
-          sizeBefore);
+  group('PokemonSearchController — search + pagination', () {
+    test('loadMore during search fetches more and applies filter', () async {
+      /// 5-item window; loadMore is no longer blocked during search.
+      final items = [
+        const PokemonSummary(id: 1, name: 'bulbasaur', spriteUrl: ''),
+        const PokemonSummary(id: 4, name: 'charmander', spriteUrl: ''),
+        const PokemonSummary(id: 7, name: 'squirtle', spriteUrl: ''),
+        const PokemonSummary(id: 25, name: 'pikachu', spriteUrl: ''),
+        const PokemonSummary(id: 6, name: 'charizard-extra', spriteUrl: ''),
+      ];
+      final container2 =
+          _makeContainer(_MultiPageRepository()); // 400 generic items
+      addTearDown(container2.dispose);
+      final ctrl2 =
+          container2.read(pokemonSearchControllerProvider.notifier);
+      await ctrl2.init(); // 100 generic items
+
+      await ctrl2.search('pokemon-1'); // matches pokemon-1, pokemon-10..19, pokemon-100..199
+      final afterSearch =
+          container2.read(pokemonSearchControllerProvider).items.length;
+      /// Auto-fetch should kick in when results < 20.
+      expect(afterSearch, greaterThanOrEqualTo(1));
+    });
+
+    test('window does not slide during search', () async {
+      /// Load 4 pages during search — windowStartOffset should stay 0.
+      final container2 = _makeContainer(_MultiPageRepository());
+      addTearDown(container2.dispose);
+      final ctrl2 =
+          container2.read(pokemonSearchControllerProvider.notifier);
+      await ctrl2.init(); // page 0
+
+      await ctrl2.search('pokemon'); // query active
+      /// Manually load 3 more pages while search is active.
+      await ctrl2.loadMore();
+      await ctrl2.loadMore();
+      await ctrl2.loadMore();
+
+      final state = container2.read(pokemonSearchControllerProvider);
+      /// Window must NOT have slid — offset stays at 0 during search.
+      expect(state.windowStartOffset, 0);
+    });
+
+    test('auto-fetch loads pages until minSearchResults reached', () async {
+      final container2 = _makeContainer(_SparseSearchRepository());
+      addTearDown(container2.dispose);
+      final ctrl2 =
+          container2.read(pokemonSearchControllerProvider.notifier);
+      await ctrl2.init();
+
+      /// Page 0 has 5 "rare" items — below threshold of 20.
+      /// Auto-fetch should trigger and load page 1 (18 more) → total 23.
+      await ctrl2.search('rare');
+
+      final state = container2.read(pokemonSearchControllerProvider);
+      expect(state.items.length, 23); // 5 + 18 from both pages
+      expect(state.items.every((p) => p.name.startsWith('rare')), isTrue);
+    });
+
+    test('clearing search trims window back to 300 and shows all items',
+        () async {
+      /// Use multi-page repo so we can load > 300 raw items during search.
+      final container2 = _makeContainer(_MultiPageRepository());
+      addTearDown(container2.dispose);
+      final ctrl2 =
+          container2.read(pokemonSearchControllerProvider.notifier);
+      await ctrl2.init(); // 100 raw
+
+      await ctrl2.search('pokemon');
+      /// Load 3 more pages during search — raw window grows to 400.
+      await ctrl2.loadMore();
+      await ctrl2.loadMore();
+      await ctrl2.loadMore();
+
+      /// Clear search — window trimmed back to 300.
+      await ctrl2.search('');
+
+      final state = container2.read(pokemonSearchControllerProvider);
+      expect(state.items.length, 300);
+      expect(state.query, '');
     });
   });
 
