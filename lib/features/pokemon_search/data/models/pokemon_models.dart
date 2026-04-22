@@ -48,6 +48,19 @@ class PokemonSummary {
   }
 }
 
+/// One page of results from the paginated list endpoint.
+/// [hasMore] is true when [next] in the API response is non-null.
+class PokemonListPage {
+  /// Pokémon summaries in this page.
+  final List<PokemonSummary> items;
+
+  /// True when there are more pages to load.
+  final bool hasMore;
+
+  /// Creates an immutable [PokemonListPage].
+  const PokemonListPage({required this.items, required this.hasMore});
+}
+
 /// Full Pokémon detail model — all fields shown on the detail screen.
 /// Parsed from the `/pokemon/{nameOrId}` JSON response.
 class PokemonDetail {

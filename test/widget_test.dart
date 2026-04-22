@@ -15,21 +15,15 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 /// In-memory fake used by widget tests to avoid real network access.
 class _FakeRepository implements PokemonRepository {
   @override
-  Future<List<PokemonSummary>> getPokemonList({int limit = 151}) async =>
-      const [
-        PokemonSummary(id: 1, name: 'bulbasaur', spriteUrl: ''),
-        PokemonSummary(id: 4, name: 'charmander', spriteUrl: ''),
-      ];
-
-  @override
-  Future<List<PokemonSummary>> searchPokemon(String query) async {
-    /// Delegate to getPokemonList and filter client-side.
-    final all = await getPokemonList();
-    if (query.isEmpty) return all;
-    return all
-        .where((p) => p.name.contains(query.toLowerCase()))
-        .toList();
-  }
+  Future<PokemonListPage> getPokemonList(
+          {int limit = 20, int offset = 0}) async =>
+      const PokemonListPage(
+        items: [
+          PokemonSummary(id: 1, name: 'bulbasaur', spriteUrl: ''),
+          PokemonSummary(id: 4, name: 'charmander', spriteUrl: ''),
+        ],
+        hasMore: false,
+      );
 
   @override
   Future<PokemonDetail> getPokemonDetail(String nameOrId) async =>

@@ -1,6 +1,7 @@
 /// Full Pokémon search screen.
 /// Displays a search bar, loading spinner, error state with retry,
-/// empty state, and a list of results.
+/// empty state, and a windowed list (max 300 items) that loads more on scroll
+/// in both directions and discards out-of-window pages.
 /// All data logic lives in [PokemonSearchController]; this file is pure UI.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,8 +9,16 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
 
+/// Pixels from list edge (top or bottom) at which the next page is triggered.
+const _scrollThreshold = 300.0;
+
+/// Estimated height of one [PokemonListTile] in logical pixels.
+/// Used to compensate scroll position after items are prepended.
+const _estimatedItemHeight = 80.0;
+
 /// Root search screen widget — reads [pokemonSearchControllerProvider].
-/// Uses [ConsumerStatefulWidget] to manage the [TextEditingController] lifecycle.
+/// Uses [ConsumerStatefulWidget] to manage the [TextEditingController] and
+/// [ScrollController] lifecycles.
 class SearchScreen extends ConsumerStatefulWidget {
   /// Creates a [SearchScreen].
   const SearchScreen({super.key});
@@ -18,36 +27,75 @@ class SearchScreen extends ConsumerStatefulWidget {
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
 }
 
-/// State for [SearchScreen] — owns the [TextEditingController] and
-/// forwards text changes to [PokemonSearchController].
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   /// Controls the search text field value and cursor.
   late final TextEditingController _searchController;
 
+  /// Attached to the list to detect scroll position for pagination.
+  late final ScrollController _scrollController;
+
   @override
   void initState() {
     super.initState();
-    /// Create the controller here so it is tied to this widget's lifecycle.
     _searchController = TextEditingController();
+    _scrollController = ScrollController()..addListener(_onScroll);
+  }
+
+  /// Triggers forward or backward page loads based on scroll proximity to
+  /// the list edges.
+  void _onScroll() {
+    final pos = _scrollController.position;
+    final controller =
+        ref.read(pokemonSearchControllerProvider.notifier);
+
+    /// Near bottom → load next page.
+    if (pos.pixels >= pos.maxScrollExtent - _scrollThreshold) {
+      controller.loadMore();
+    }
+
+    /// Near top → load previous page.
+    if (pos.pixels <= _scrollThreshold) {
+      controller.loadPrevious();
+    }
   }
 
   @override
   void dispose() {
-    /// Always dispose to prevent memory leaks.
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    /// Watch causes the widget to rebuild whenever state changes.
     final state = ref.watch(pokemonSearchControllerProvider);
-    /// Read (not watch) the notifier so callbacks don't trigger extra rebuilds.
     final controller = ref.read(pokemonSearchControllerProvider.notifier);
+
+    /// Compensate scroll position whenever the window shifts in either direction
+    /// so the viewport stays on the same items after items are added or dropped.
+    ///
+    /// offsetDelta > 0 → leading items dropped (loadMore overflow):
+    ///   remaining items moved up → subtract to keep viewport on same row.
+    /// offsetDelta < 0 → items prepended (loadPrevious):
+    ///   all items shifted down → add to keep viewport on same row.
+    ///
+    /// Unified formula: jumpTo(offset - offsetDelta × itemHeight).
+    ref.listen<PokemonSearchState>(pokemonSearchControllerProvider,
+        (prev, next) {
+      if (prev == null) return;
+      final offsetDelta = next.windowStartOffset - prev.windowStartOffset;
+      if (offsetDelta == 0) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(
+            _scrollController.offset - offsetDelta * _estimatedItemHeight,
+          );
+        }
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(
-        /// Pokéball-red background from the seeded theme.
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         title: const Text('Pokédex'),
@@ -55,13 +103,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       ),
       body: Column(
         children: [
-          /// Search bar section.
           _SearchBar(
             controller: _searchController,
             onChanged: controller.search,
           ),
-          /// Content section fills remaining vertical space.
-          Expanded(child: _Content(state: state, onRetry: controller.retry)),
+          Expanded(
+            child: _Content(
+              state: state,
+              scrollController: _scrollController,
+              onRetry: controller.retry,
+            ),
+          ),
         ],
       ),
     );
@@ -69,18 +121,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Private sub-widgets — split out to keep build() readable.
+// Private sub-widgets
 // ---------------------------------------------------------------------------
 
 /// Search input field with a clear button.
 class _SearchBar extends StatelessWidget {
-  /// Controls the text field value.
   final TextEditingController controller;
-
-  /// Called with the new query string on every keystroke.
   final ValueChanged<String> onChanged;
 
-  /// Creates a [_SearchBar].
   const _SearchBar({required this.controller, required this.onChanged});
 
   @override
@@ -89,12 +137,10 @@ class _SearchBar extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: TextField(
         controller: controller,
-        /// Fire [onChanged] on every character change.
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: 'Search Pokémon…',
           prefixIcon: const Icon(Icons.search),
-          /// Show a clear button only when there is text.
           suffixIcon: ValueListenableBuilder<TextEditingValue>(
             valueListenable: controller,
             builder: (_, value, __) => value.text.isEmpty
@@ -103,7 +149,6 @@ class _SearchBar extends StatelessWidget {
                     icon: const Icon(Icons.clear),
                     tooltip: 'Clear search',
                     onPressed: () {
-                      /// Clear text field and reset the search results.
                       controller.clear();
                       onChanged('');
                     },
@@ -120,54 +165,71 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-/// Switches between loading, error, empty, and list based on [state].
+/// Switches between loading, error, empty, and the windowed list.
 class _Content extends StatelessWidget {
-  /// Current search state.
   final PokemonSearchState state;
-
-  /// Called when the user taps Retry in the error view.
+  final ScrollController scrollController;
   final VoidCallback onRetry;
 
-  /// Creates a [_Content] widget.
-  const _Content({required this.state, required this.onRetry});
+  const _Content({
+    required this.state,
+    required this.scrollController,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
-    /// Show spinner while loading.
     if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    /// Show error message with retry button.
     if (state.error != null) {
       return _ErrorView(message: state.error!, onRetry: onRetry);
     }
 
-    /// Show empty state when search returns no results.
     if (state.items.isEmpty) {
       return _EmptyView(query: state.query);
     }
 
-    /// Show the list of Pokémon tiles.
+    /// Sentinel slots at index 0 (previous spinner) and end (next spinner).
+    final topSlot = state.isLoadingPrevious ? 1 : 0;
+    final bottomSlot = state.isLoadingMore ? 1 : 0;
+    final total = topSlot + state.items.length + bottomSlot;
+
     return ListView.builder(
-      /// Add bottom padding so the last item isn't hidden behind system nav.
+      controller: scrollController,
       padding: const EdgeInsets.only(bottom: 16),
-      itemCount: state.items.length,
-      itemBuilder: (context, index) =>
-          PokemonListTile(item: state.items[index]),
+      itemCount: total,
+      itemBuilder: (context, index) {
+        /// Top spinner while fetching the previous page.
+        if (state.isLoadingPrevious && index == 0) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final itemIndex = index - topSlot;
+
+        /// Bottom spinner while fetching the next page.
+        if (itemIndex >= state.items.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        return PokemonListTile(item: state.items[itemIndex]);
+      },
     );
   }
 }
 
 /// Full-screen error message with a Retry button.
 class _ErrorView extends StatelessWidget {
-  /// User-facing error description.
   final String message;
-
-  /// Called when the user taps the Retry button.
   final VoidCallback onRetry;
 
-  /// Creates an [_ErrorView].
   const _ErrorView({required this.message, required this.onRetry});
 
   @override
@@ -200,15 +262,12 @@ class _ErrorView extends StatelessWidget {
 
 /// Full-screen empty state shown when a search returns no results.
 class _EmptyView extends StatelessWidget {
-  /// The query that produced no results — shown in the message.
   final String query;
 
-  /// Creates an [_EmptyView].
   const _EmptyView({required this.query});
 
   @override
   Widget build(BuildContext context) {
-    /// Personalise the message when a specific query was entered.
     final message = query.isEmpty
         ? 'No Pokémon found.'
         : 'No results for "$query".';

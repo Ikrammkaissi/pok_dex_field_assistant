@@ -50,8 +50,22 @@ const _charmanderJson = <String, dynamic>{
   ],
 };
 
-/// List-endpoint response returning two Pokémon names.
-const _listJson = <String, dynamic>{
+/// List-endpoint response with a next page available.
+const _listJsonWithMore = <String, dynamic>{
+  'count': 1350,
+  'next': 'https://pokeapi.co/api/v2/pokemon?offset=2&limit=2',
+  'previous': null,
+  'results': [
+    {'name': 'bulbasaur', 'url': ''},
+    {'name': 'charmander', 'url': ''},
+  ],
+};
+
+/// List-endpoint response where next is null — last page.
+const _listJsonNoMore = <String, dynamic>{
+  'count': 1350,
+  'next': null,
+  'previous': null,
   'results': [
     {'name': 'bulbasaur', 'url': ''},
     {'name': 'charmander', 'url': ''},
@@ -65,18 +79,18 @@ const _listJson = <String, dynamic>{
 /// Fake [http.BaseClient] that returns pre-baked JSON without network access.
 /// Routes requests by URL substring to the appropriate fixture.
 class _FakeHttpClient extends http.BaseClient {
-  /// Number of times [send] has been called — used to verify caching.
-  int sendCallCount = 0;
+  /// Controls which list fixture to return.
+  final bool hasMore;
+
+  _FakeHttpClient({this.hasMore = true});
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    /// Increment call count so tests can verify caching behaviour.
-    sendCallCount++;
     final url = request.url.toString();
 
-    /// Route list endpoint to _listJson fixture.
+    /// Route list endpoint to the appropriate fixture based on [hasMore].
     if (url.contains('/pokemon?limit=')) {
-      return _response(_listJson);
+      return _response(hasMore ? _listJsonWithMore : _listJsonNoMore);
     }
 
     /// Route individual Pokémon detail endpoints to their fixtures.
@@ -107,82 +121,61 @@ class _FakeHttpClient extends http.BaseClient {
 // ---------------------------------------------------------------------------
 
 void main() {
-  late _FakeHttpClient fakeClient;
   late PokemonRepositoryImpl repository;
 
-  /// Reset fake and repository before each test for isolation.
-  setUp(() {
-    fakeClient = _FakeHttpClient();
-    repository = PokemonRepositoryImpl(PokeApiHttpClient(fakeClient));
-  });
-
   group('PokemonRepositoryImpl.getPokemonList', () {
-    /// Should return all items enriched from the fake API responses.
-    test('returns all items from API', () async {
-      final list = await repository.getPokemonList(limit: 2);
+    test('returns items from API response', () async {
+      repository =
+          PokemonRepositoryImpl(PokeApiHttpClient(_FakeHttpClient()));
 
-      expect(list.length, 2);
-      expect(list.map((p) => p.name), containsAll(['bulbasaur', 'charmander']));
+      final page = await repository.getPokemonList(limit: 2);
+
+      expect(page.items.length, 2);
+      expect(page.items.map((p) => p.name),
+          containsAll(['bulbasaur', 'charmander']));
     });
 
-    /// Second call should use the cache — HTTP client not called again.
-    test('caches results — HTTP not called on second getPokemonList', () async {
-      /// First call: 1 list request + 2 detail requests = 3 HTTP calls.
+    test('hasMore is true when next field is non-null', () async {
+      repository =
+          PokemonRepositoryImpl(PokeApiHttpClient(_FakeHttpClient(hasMore: true)));
+
+      final page = await repository.getPokemonList(limit: 2);
+
+      expect(page.hasMore, isTrue);
+    });
+
+    test('hasMore is false when next field is null', () async {
+      repository = PokemonRepositoryImpl(
+          PokeApiHttpClient(_FakeHttpClient(hasMore: false)));
+
+      final page = await repository.getPokemonList(limit: 2);
+
+      expect(page.hasMore, isFalse);
+    });
+
+    test('each call hits the network — no internal cache', () async {
+      /// Count HTTP calls across two getPokemonList calls.
+      var callCount = 0;
+      final client = _CountingFakeClient(
+          inner: _FakeHttpClient(), onSend: () => callCount++);
+      repository = PokemonRepositoryImpl(PokeApiHttpClient(client));
+
       await repository.getPokemonList(limit: 2);
-      final countAfterFirst = fakeClient.sendCallCount;
+      final afterFirst = callCount;
 
-      /// Second call: should return cache with 0 additional HTTP calls.
       await repository.getPokemonList(limit: 2);
 
-      expect(fakeClient.sendCallCount, countAfterFirst);
-    });
-  });
-
-  group('PokemonRepositoryImpl.searchPokemon', () {
-    /// Empty query returns everything.
-    test('returns all items when query is empty', () async {
-      final results = await repository.searchPokemon('');
-
-      expect(results.length, 2);
-    });
-
-    /// Partial match should return matching Pokémon only.
-    test('filters by substring match', () async {
-      final results = await repository.searchPokemon('char');
-
-      expect(results.length, 1);
-      expect(results.first.name, 'charmander');
-    });
-
-    /// Uppercase query should still match because comparison lowercases input.
-    test('match is case-insensitive', () async {
-      final results = await repository.searchPokemon('BULB');
-
-      expect(results.length, 1);
-      expect(results.first.name, 'bulbasaur');
-    });
-
-    /// No match returns empty list without error.
-    test('returns empty list when no Pokémon match', () async {
-      final results = await repository.searchPokemon('zzz');
-
-      expect(results, isEmpty);
-    });
-
-    /// Search populates cache; second search makes no additional HTTP calls.
-    test('search populates cache on first call', () async {
-      await repository.searchPokemon('char');
-      final countAfterFirst = fakeClient.sendCallCount;
-
-      /// Second search hits cache — no new HTTP calls.
-      await repository.searchPokemon('bulb');
-
-      expect(fakeClient.sendCallCount, countAfterFirst);
+      /// Second call should make the same number of HTTP calls as the first.
+      expect(callCount, greaterThan(afterFirst));
     });
   });
 
   group('PokemonRepositoryImpl.getPokemonDetail', () {
-    /// Should return a [PokemonDetail] with fields from the fake detail response.
+    setUp(() {
+      repository =
+          PokemonRepositoryImpl(PokeApiHttpClient(_FakeHttpClient()));
+    });
+
     test('returns PokemonDetail with correct fields', () async {
       final detail = await repository.getPokemonDetail('bulbasaur');
 
@@ -192,4 +185,18 @@ void main() {
       expect(detail.stats['hp'], 45);
     });
   });
+}
+
+/// Wraps [_FakeHttpClient] and counts every [send] call.
+class _CountingFakeClient extends http.BaseClient {
+  final http.BaseClient inner;
+  final void Function() onSend;
+
+  _CountingFakeClient({required this.inner, required this.onSend});
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    onSend();
+    return inner.send(request);
+  }
 }
