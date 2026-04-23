@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pok_dex_field_assistant/app/router.dart';
+
+import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
+
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
@@ -98,12 +101,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         title: const Text('Pokédex'),
         centerTitle: false,
         actions: [
+
           /// Navigates to the weather suggestion screen.
           IconButton(
             icon: const Icon(Icons.wb_sunny_outlined),
             tooltip: 'Suggest Pokémon by Weather',
             onPressed: () => context.push(AppRoutes.weather),
           ),
+
+          /// Shows saved count badge when bookmarks exist; navigates to bookmarks screen.
+          _BookmarkNavButton(),
+
         ],
       ),
       body: Column(
@@ -261,6 +269,55 @@ class _ErrorView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// AppBar action that navigates to [BookmarksScreen].
+/// Shows a count badge when at least one Pokémon is bookmarked.
+class _BookmarkNavButton extends ConsumerWidget {
+  /// Creates a [_BookmarkNavButton].
+  const _BookmarkNavButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    /// Watch bookmark count — rebuilds only when the list length changes.
+    final count = ref.watch(bookmarkNotifierProvider).length;
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        IconButton(
+          tooltip: 'Saved Pokémon',
+          icon: const Icon(Icons.bookmark_outlined),
+          onPressed: () => context.push(AppRoutes.bookmarks),
+        ),
+        /// Badge showing how many Pokémon are saved; hidden when count is 0.
+        if (count > 0)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.error,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onError,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

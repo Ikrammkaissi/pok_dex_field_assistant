@@ -53,6 +53,9 @@ dependencies:
   # Chosen over just_audio: simpler API, sufficient for single-clip playback.
   audioplayers: ^6.1.0
 
+  # Key-value local storage for persisting bookmarks across sessions.
+  shared_preferences: ^2.3.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
