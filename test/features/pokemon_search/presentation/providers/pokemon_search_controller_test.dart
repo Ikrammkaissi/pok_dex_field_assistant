@@ -263,13 +263,14 @@ void main() {
       expect(state.windowStartOffset, 0);
     });
 
-    test('7th incremental load drops the leading 30 items and shifts start',
+    test('3rd incremental load drops the leading 30 items and shifts start',
         () async {
-      await _loadMoreTimes(controller, 7);
+      // 100 + 3×30 = 190 > _maxWindow(180) → drop leading 30 → 160 items, start=30
+      await _loadMoreTimes(controller, 3);
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      expect(state.items.length, 280);
+      expect(state.items.length, 160);
       expect(state.windowStartOffset, 30);
       expect(state.hasPrevious, isTrue);
       expect(state.items.first.name, 'pokemon-31');
@@ -305,27 +306,27 @@ void main() {
       container = _makeContainer(_MultiPageRepository());
       controller = container.read(pokemonSearchControllerProvider.notifier);
       await controller.init(); // 1..100
-      await _loadMoreTimes(controller, 7); // 31..310 (window shifted, start=30)
+      await _loadMoreTimes(controller, 3); // 100+3×30=190>180 → drop30 → 160 items, start=30
     });
 
     tearDown(() => container.dispose());
 
-    test('setup: window at start=30, size=280', () {
+    test('setup: window at start=30, size=160', () {
       final s = container.read(pokemonSearchControllerProvider);
       expect(s.windowStartOffset, 30);
-      expect(s.items.length, 280);
+      expect(s.items.length, 160);
       expect(s.hasPrevious, isTrue);
     });
 
-    test('loadPrevious prepends the prior 30 items and drops the trailing 30',
+    test('loadPrevious prepends the prior 30 items and drops trailing to cap',
         () async {
       await controller.loadPrevious();
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      /// Window shifts back to offset 0 and expands back to 300 items.
+      // Prepend 30 → 190 items; 190>180 → removeRange(180,190) → 180 items, start=0.
       expect(state.windowStartOffset, 0);
-      expect(state.items.length, 300);
+      expect(state.items.length, 180);
       expect(state.hasPrevious, isFalse);
       expect(state.items.first.name, 'pokemon-1');
     });

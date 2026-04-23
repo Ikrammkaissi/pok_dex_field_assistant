@@ -12,10 +12,10 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 const _initialPageSize = 100;
 
 /// Number of Pokémon fetched on each subsequent pagination step.
-const _pageSize = 10;
+const _pageSize = 30;
 
 /// Maximum raw items kept in the window during browse mode.
-const _maxWindow = 150;
+const _maxWindow = 180;
 
 /// Minimum filtered results before auto-fetch stops trying to find more.
 const _minSearchResults = 20;

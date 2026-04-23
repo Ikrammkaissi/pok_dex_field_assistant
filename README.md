@@ -8,29 +8,162 @@ A Flutter app for searching Pokémon, viewing detailed stats, bookmarking favour
 
 ### Prerequisites
 
-| Tool | Version |
-|------|---------|
-| Flutter SDK | ≥ 3.11.0 |
-| Dart SDK | ≥ 3.11.0 (bundled with Flutter) |
-| Xcode (iOS) | ≥ 15 |
-| Android Studio / SDK | API 21+ |
+| Tool | Version | Required for |
+|------|---------|-------------|
+| Flutter SDK | ≥ 3.11.0 | All targets |
+| Dart SDK | ≥ 3.11.0 | All targets (bundled with Flutter) |
+| Xcode | ≥ 15 | iOS only |
+| CocoaPods | latest | iOS only |
+| Android Studio / SDK | API 21+ | Android only |
+| Chrome | any | Web only |
 
-### Install and run
+No API keys required. Uses [PokéAPI](https://pokeapi.co) and [Open-Meteo](https://open-meteo.com) — both public, no auth.
+
+### Initial setup
 
 ```bash
 git clone <repo-url>
 cd pok_dex_field_assistant
 flutter pub get
-flutter run
 ```
 
-No API keys required. The app uses [PokéAPI](https://pokeapi.co) (public, no auth) and [Open-Meteo](https://open-meteo.com) (public, no auth).
+iOS only — install CocoaPods dependencies after `pub get`:
+
+```bash
+cd ios && pod install && cd ..
+```
+
+---
+
+### Android
+
+**Debug** (hot reload, debug banner, verbose logging):
+
+```bash
+flutter run -d android
+```
+
+**Release** (minified, signed, no debug overlay):
+
+```bash
+flutter build apk --release
+# Output: build/app/outputs/flutter-apk/app-release.apk
+
+# Universal APK (all ABIs in one file — larger, good for local testing):
+flutter build apk --release
+
+# Split by ABI (smaller per-device downloads — use for Play Store):
+flutter build apk --release --split-per-abi
+# Output: app-armeabi-v7a-release.apk, app-arm64-v8a-release.apk, app-x86_64-release.apk
+
+# App Bundle for Play Store (recommended over APK for distribution):
+flutter build appbundle --release
+# Output: build/app/outputs/bundle/release/app-release.aab
+```
+
+> **Signing:** Release builds require a keystore. See [Android signing docs](https://docs.flutter.dev/deployment/android#signing-the-app). For local testing only, `--release` without signing will still build but cannot be installed on non-debug devices.
+
+---
+
+### iOS
+
+**Debug** (requires connected device or simulator, Xcode installed):
+
+```bash
+# List available simulators/devices:
+flutter devices
+
+flutter run -d ios
+```
+
+**Release** (requires Apple Developer account for device install):
+
+```bash
+flutter build ios --release
+# Output: build/ios/iphoneos/Runner.app
+
+# For App Store distribution — open Xcode and archive:
+open ios/Runner.xcworkspace
+# Then: Product → Archive → Distribute App
+```
+
+> **Note:** `flutter build ios --release` does not produce a distributable `.ipa` directly. Use Xcode's Organizer or `xcodebuild` for App Store / TestFlight submission.
+
+---
+
+### Web
+
+**Debug** (Chrome, hot restart, DevTools available):
+
+```bash
+flutter run -d chrome
+```
+
+**Release** (minified, tree-shaken, production-ready):
+
+```bash
+flutter build web --release
+# Output: build/web/
+
+# Serve locally to verify the release build:
+cd build/web && python3 -m http.server 8080
+# Then open http://localhost:8080
+```
+
+> **Note:** Audio cries (`audioplayers`) require HTTPS in production web deployments due to browser autoplay policy. Local `python3 -m http.server` is HTTP — cries may not play.
+
+---
+
+### Run on a specific device
+
+```bash
+# List all connected devices and emulators:
+flutter devices
+
+# Run on a specific device by ID:
+flutter run -d <device-id>
+```
+
+---
 
 ### Run tests
 
-```bash
-flutter test
+**Recommended — PowerShell script** (generates timestamped reports):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tool\run_tests.ps1
 ```
+
+Produces three artifacts under `reports/tests/<timestamp>/`:
+
+| File | Contents |
+|------|----------|
+| `flutter_test_machine.jsonl` | Machine-readable JSON Lines test results |
+| `flutter_test_console.log` | Full console output |
+| `lcov.info` | Coverage data (LCOV format) |
+| `coverage_html/index.html` | HTML coverage report (requires `genhtml` on PATH) |
+
+Skip HTML generation if `genhtml` is not installed:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tool\run_tests.ps1 -SkipHtmlCoverage
+```
+
+**Manual — single commands:**
+
+```bash
+# All tests:
+flutter test
+
+# Single file:
+flutter test test/features/bookmarks/presentation/providers/bookmark_notifier_test.dart
+
+# With LCOV coverage:
+flutter test --coverage
+# Then generate HTML (requires genhtml / lcov):
+genhtml coverage/lcov.info -o coverage/html
+```
+
 
 ### Lint
 
