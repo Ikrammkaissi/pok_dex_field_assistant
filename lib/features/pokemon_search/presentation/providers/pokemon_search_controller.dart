@@ -22,8 +22,8 @@ const _minSearchResults = 20;
 
 /// Manages [PokemonSearchState] in response to user interactions.
 /// Implements a sliding window for browse mode (max [_maxWindow] raw items).
-/// During search, the window grows as more pages are fetched and does not slide
-/// — it is trimmed back to [_maxWindow] when search is cleared.
+/// During search, results are reloaded from offset 0 and clearing the search
+/// reloads browse mode from scratch.
 class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   /// Logger tag for this class.
   static const _tag = 'SearchController';
@@ -68,6 +68,8 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   Future<void> loadMore() async {
     if (state.isLoadingMore || state.isLoading || !state.hasMore) return;
 
+    final query = state.query;
+    final previousVisibleCount = state.items.length;
     final nextOffset = _windowStartOffset + _window.length;
     AppLogger.debug(_tag, 'loadMore — offset=$nextOffset, query="${state.query}"');
     state = state.copyWith(isLoadingMore: true);
@@ -94,6 +96,15 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
         hasPrevious: _windowStartOffset > 0,
         clearError: true,
       );
+
+      /// In search mode, keep paging forward until this fetch yields at least
+      /// one additional visible result or the API is exhausted.
+      if (query.isNotEmpty &&
+          state.query == query &&
+          state.items.length == previousVisibleCount &&
+          state.hasMore) {
+        await _autoFetchUntilVisibleCountExceeds(query, previousVisibleCount);
+      }
     } catch (e, s) {
       AppLogger.error(_tag, 'loadMore failed at offset=$nextOffset',
           error: e, stackTrace: s);
@@ -148,27 +159,56 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   /// When [query] is non-empty, auto-fetches additional pages until at least
   /// [_minSearchResults] matching items are found or no more data exists.
   ///
-  /// When [query] is cleared, trims the window back to [_maxWindow] (dropping
-  /// items loaded during search) and restores the full browse view.
+  /// When [query] is cleared, reloads browse mode from the first page.
   Future<void> search(String query) async {
     AppLogger.debug(_tag, 'search — query: "$query"');
-    state = state.copyWith(query: query, clearError: true);
-
     if (query.isEmpty) {
-      _trimWindowToMax();
-      state = state.copyWith(
-        items: List.unmodifiable(_window),
-        windowStartOffset: _windowStartOffset,
-        hasPrevious: _windowStartOffset > 0,
-      );
+      await _reloadBrowseFromScratch();
       return;
     }
 
-    final filtered = _applyFilter(query);
-    state = state.copyWith(items: filtered);
+    state = state.copyWith(
+      query: query,
+      items: const [],
+      isLoading: true,
+      isLoadingMore: false,
+      isLoadingPrevious: false,
+      windowStartOffset: 0,
+      hasPrevious: false,
+      clearError: true,
+    );
+
+    final requestQuery = query;
+    try {
+      final page =
+          await _repository.getPokemonList(limit: _initialPageSize, offset: 0);
+
+      if (!mounted || state.query != requestQuery) return;
+
+      _window
+        ..clear()
+        ..addAll(page.items);
+      _windowStartOffset = 0;
+
+      final filtered = _applyFilter(requestQuery);
+      state = state.copyWith(
+        items: filtered,
+        isLoading: false,
+        windowStartOffset: 0,
+        hasMore: page.hasMore,
+        hasPrevious: false,
+        clearError: true,
+      );
+    } catch (e, s) {
+      if (!mounted || state.query != requestQuery) return;
+      AppLogger.error(_tag, 'search failed for query="$requestQuery"',
+          error: e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: _errorMessage(e));
+      return;
+    }
 
     /// Auto-fetch more pages if we don't have enough matching results yet.
-    await _autoFetchIfNeeded(query);
+    await _autoFetchIfNeeded(requestQuery);
   }
 
   /// Resets to the initial state and re-runs [init].
@@ -223,13 +263,60 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
     }
   }
 
-  /// Drops items loaded during search (beyond [_maxWindow]) from the trailing
-  /// end of the window. Does not change [_windowStartOffset].
-  void _trimWindowToMax() {
-    if (_window.length > _maxWindow) {
-      _window.removeRange(_maxWindow, _window.length);
-      AppLogger.debug(
-          _tag, 'trimWindow — trimmed to $_maxWindow, start=$_windowStartOffset');
+  /// Keeps fetching additional search pages until at least one more filtered
+  /// result appears beyond [minimumVisibleCount], or no more data exists.
+  Future<void> _autoFetchUntilVisibleCountExceeds(
+    String query,
+    int minimumVisibleCount,
+  ) async {
+    while (mounted &&
+        state.query == query &&
+        state.query.isNotEmpty &&
+        state.items.length <= minimumVisibleCount &&
+        state.hasMore &&
+        !state.isLoadingMore &&
+        state.error == null) {
+      AppLogger.debug(_tag,
+          'autoFetchVisibleHit — still at ${state.items.length} results, fetching more');
+      await loadMore();
+    }
+  }
+
+  /// Clears search results and reloads browse mode from offset 0.
+  Future<void> _reloadBrowseFromScratch() async {
+    state = state.copyWith(
+      query: '',
+      items: const [],
+      isLoading: true,
+      isLoadingMore: false,
+      isLoadingPrevious: false,
+      windowStartOffset: 0,
+      hasPrevious: false,
+      clearError: true,
+    );
+
+    _window.clear();
+    _windowStartOffset = 0;
+
+    try {
+      final page =
+          await _repository.getPokemonList(limit: _initialPageSize, offset: 0);
+
+      if (!mounted || state.query.isNotEmpty) return;
+
+      _window.addAll(page.items);
+      state = state.copyWith(
+        items: List.unmodifiable(_window),
+        isLoading: false,
+        windowStartOffset: 0,
+        hasMore: page.hasMore,
+        hasPrevious: false,
+        clearError: true,
+      );
+    } catch (e, s) {
+      if (!mounted || state.query.isNotEmpty) return;
+      AppLogger.error(_tag, 'browse reload failed', error: e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: _errorMessage(e));
     }
   }
 

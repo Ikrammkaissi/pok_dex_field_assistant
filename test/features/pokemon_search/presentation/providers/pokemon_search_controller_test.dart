@@ -99,6 +99,44 @@ class _SparseSearchRepository implements PokemonRepository {
       throw UnimplementedError();
 }
 
+/// Search repo with an empty-match gap during pagination.
+/// Initial search page contains exactly 20 matches so auto-fetch stops.
+/// The first paged fetch contains no new matches, and the second paged fetch
+/// contains one new match. Search-mode loadMore should keep fetching until that
+/// new visible item appears.
+class _SearchGapRepository implements PokemonRepository {
+  static final _page0 = <PokemonSummary>[
+    ...List.generate(
+        20,
+        (i) => PokemonSummary(
+            id: 1000 + i, name: 'target-${1000 + i}', spriteUrl: '')),
+    ..._fakeItems(1, 80),
+  ];
+
+  static final _page1 = _fakeItems(101, 30);
+
+  static final _page2 = <PokemonSummary>[
+    const PokemonSummary(id: 2000, name: 'target-2000', spriteUrl: ''),
+    ..._fakeItems(131, 29),
+  ];
+
+  int callCount = 0;
+
+  @override
+  Future<PokemonListPage> getPokemonList(
+      {int limit = 100, int offset = 0}) async {
+    callCount++;
+    if (offset == 0) return PokemonListPage(items: _page0, hasMore: true);
+    if (offset == 100) return PokemonListPage(items: _page1, hasMore: true);
+    if (offset == 130) return PokemonListPage(items: _page2, hasMore: false);
+    return PokemonListPage(items: [], hasMore: false);
+  }
+
+  @override
+  Future<PokemonDetail> getPokemonDetail(String nameOrId) =>
+      throw UnimplementedError();
+}
+
 /// Always throws [NetworkException].
 class _ErrorRepository implements PokemonRepository {
   @override
@@ -203,38 +241,38 @@ void main() {
 
     tearDown(() => container.dispose());
 
-    test('appends 10 items after the initial 100, no window shift', () async {
+    test('appends 30 items after the initial 100, no window shift', () async {
       await controller.loadMore();
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      expect(state.items.length, 110);
+      expect(state.items.length, 130);
       expect(state.windowStartOffset, 0);
       expect(state.hasPrevious, isFalse);
       expect(state.hasMore, isTrue);
     });
 
-    test('keeps growing in 10-item steps before hitting the window cap',
+    test('keeps growing in 30-item steps before hitting the window cap',
         () async {
-      await controller.loadMore(); // 110
-      await controller.loadMore(); // 120
+      await controller.loadMore(); // 130
+      await controller.loadMore(); // 160
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      expect(state.items.length, 120);
+      expect(state.items.length, 160);
       expect(state.windowStartOffset, 0);
     });
 
-    test('21st incremental load drops the leading 10 items and shifts start',
+    test('7th incremental load drops the leading 30 items and shifts start',
         () async {
-      await _loadMoreTimes(controller, 21);
+      await _loadMoreTimes(controller, 7);
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      expect(state.items.length, 300);
-      expect(state.windowStartOffset, 10);
+      expect(state.items.length, 280);
+      expect(state.windowStartOffset, 30);
       expect(state.hasPrevious, isTrue);
-      expect(state.items.first.name, 'pokemon-11');
+      expect(state.items.first.name, 'pokemon-31');
     });
 
     test('no-op when hasMore is false', () async {
@@ -267,25 +305,25 @@ void main() {
       container = _makeContainer(_MultiPageRepository());
       controller = container.read(pokemonSearchControllerProvider.notifier);
       await controller.init(); // 1..100
-      await _loadMoreTimes(controller, 21); // 11..310 (window shifted, start=10)
+      await _loadMoreTimes(controller, 7); // 31..310 (window shifted, start=30)
     });
 
     tearDown(() => container.dispose());
 
-    test('setup: window at start=10, size=300', () {
+    test('setup: window at start=30, size=280', () {
       final s = container.read(pokemonSearchControllerProvider);
-      expect(s.windowStartOffset, 10);
-      expect(s.items.length, 300);
+      expect(s.windowStartOffset, 30);
+      expect(s.items.length, 280);
       expect(s.hasPrevious, isTrue);
     });
 
-    test('loadPrevious prepends the prior 10 items and drops the trailing 10',
+    test('loadPrevious prepends the prior 30 items and drops the trailing 30',
         () async {
       await controller.loadPrevious();
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      /// Window shifts back: now covers 1..300 again.
+      /// Window shifts back to offset 0 and expands back to 300 items.
       expect(state.windowStartOffset, 0);
       expect(state.items.length, 300);
       expect(state.hasPrevious, isFalse);
@@ -352,14 +390,63 @@ void main() {
       expect(state.error, isNull);
     });
 
-    test('clearing query restores full window', () async {
+    test('clearing query reloads browse mode from scratch', () async {
       await controller.search('char');
       await controller.search('');
       expect(container.read(pokemonSearchControllerProvider).items.length, 5);
     });
+
+    test('search restarts from index 0 and clearing reloads from offset 0',
+        () async {
+      final repo = _MultiPageRepository();
+      final container2 = _makeContainer(repo);
+      addTearDown(container2.dispose);
+      final ctrl2 =
+          container2.read(pokemonSearchControllerProvider.notifier);
+      await ctrl2.init();
+      await _loadMoreTimes(ctrl2, 7); // browse window starts at offset 30
+
+      await ctrl2.search('pokemon-1');
+
+      final searchState = container2.read(pokemonSearchControllerProvider);
+      expect(searchState.windowStartOffset, 0);
+      expect(searchState.items.any((p) => p.name == 'pokemon-1'), isTrue);
+      final callsBeforeClear = repo.callCount;
+
+      await ctrl2.search('');
+
+      final browseState = container2.read(pokemonSearchControllerProvider);
+      expect(browseState.windowStartOffset, 0);
+      expect(browseState.items.length, 100);
+      expect(browseState.items.first.name, 'pokemon-1');
+      expect(repo.callCount, callsBeforeClear + 1);
+    });
   });
 
   group('PokemonSearchController — search + pagination', () {
+    test(
+        'loadMore during search keeps fetching until a new matching item appears',
+        () async {
+      final repo = _SearchGapRepository();
+      final container2 = _makeContainer(repo);
+      addTearDown(container2.dispose);
+      final ctrl2 =
+          container2.read(pokemonSearchControllerProvider.notifier);
+      await ctrl2.init();
+
+      await ctrl2.search('target');
+      expect(container2.read(pokemonSearchControllerProvider).items.length, 20);
+      final callsBeforeLoadMore = repo.callCount;
+
+      await ctrl2.loadMore();
+
+      final state = container2.read(pokemonSearchControllerProvider);
+      expect(state.items.length, 21);
+      expect(state.items.last.name, 'target-2000');
+      expect(state.hasMore, isFalse);
+      expect(repo.callCount, callsBeforeLoadMore + 2);
+    });
+
     test('loadMore during search fetches more and applies filter', () async {
       /// 5-item window; loadMore is no longer blocked during search.
       final items = [
@@ -418,9 +505,9 @@ void main() {
       expect(state.items.every((p) => p.name.startsWith('rare')), isTrue);
     });
 
-    test('clearing search trims window back to 300 and shows all items',
+    test('clearing search reloads the initial browse page',
         () async {
-      /// Use multi-page repo so we can load > 300 raw items during search.
+      /// Use multi-page repo so clearing search triggers a fresh initial fetch.
       final container2 = _makeContainer(_MultiPageRepository());
       addTearDown(container2.dispose);
       final ctrl2 =
@@ -430,12 +517,13 @@ void main() {
       await ctrl2.search('pokemon');
       await _loadMoreTimes(ctrl2, 30); // raw window grows to 400 during search
 
-      /// Clear search — window trimmed back to 300.
+      /// Clear search — browse mode is fetched again from offset 0.
       await ctrl2.search('');
 
       final state = container2.read(pokemonSearchControllerProvider);
-      expect(state.items.length, 300);
+      expect(state.items.length, 100);
       expect(state.query, '');
+      expect(state.windowStartOffset, 0);
     });
   });
 

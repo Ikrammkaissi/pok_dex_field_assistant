@@ -64,6 +64,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final state = ref.watch(pokemonSearchControllerProvider);
     final controller = ref.read(pokemonSearchControllerProvider.notifier);
 
+    /// When the window slides forward (top items dropped), jump scroll up so
+    /// extentAfter > 0 and _onScroll doesn't immediately re-trigger loadMore.
+    /// When the window slides backward (bottom items dropped), jump scroll down
+    /// so extentBefore > 0 and _onScroll doesn't immediately re-trigger loadPrevious.
+    ref.listen<int>(
+      pokemonSearchControllerProvider.select((s) => s.windowStartOffset),
+      (prev, next) {
+        if (prev == null || next == prev) return;
+        if (!_scrollController.hasClients) return;
+        final pos = _scrollController.position;
+        final itemCount = ref.read(pokemonSearchControllerProvider).items.length;
+        if (itemCount == 0 || pos.maxScrollExtent <= 0) return;
+        final estimatedItemHeight = pos.maxScrollExtent / itemCount;
+        final delta = (next - prev).abs();
+        final newOffset = next > prev
+            // Slid forward: items dropped from top → jump up.
+            ? (pos.pixels - delta * estimatedItemHeight).clamp(
+                0.0, pos.maxScrollExtent)
+            // Slid backward: items dropped from bottom → jump down.
+            : (pos.pixels + delta * estimatedItemHeight).clamp(
+                0.0, pos.maxScrollExtent);
+        _scrollController.jumpTo(newOffset);
+      },
+    );
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.primary,
