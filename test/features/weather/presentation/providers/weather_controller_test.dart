@@ -1,6 +1,6 @@
 /// Unit tests for [WeatherController].
 /// Uses a hand-written fake [WeatherRepository] and [ProviderContainer] overrides
-/// — no real network calls, no Flutter widgets needed.
+/// , no real network calls, no Flutter widgets needed.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
@@ -8,7 +8,6 @@ import 'package:pok_dex_field_assistant/features/weather/data/models/weather_mod
 import 'package:pok_dex_field_assistant/features/weather/data/weather_repository.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_controller.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_providers.dart';
-import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -38,7 +37,7 @@ List<PokemonSummary> _dummyPokemon(int count) => List.generate(
 // Fake repository
 // ---------------------------------------------------------------------------
 
-/// Configurable fake — controls happy-path responses and whether to throw.
+/// Configurable fake , controls happy-path responses and whether to throw.
 class _FakeWeatherRepository implements WeatherRepository {
   /// Returned by [getCurrentWeather] on success.
   final WeatherData weatherResult;
@@ -93,7 +92,7 @@ class _FakeWeatherRepository implements WeatherRepository {
 // ---------------------------------------------------------------------------
 
 /// Creates a [ProviderContainer] with [WeatherRepositoryImpl] overridden by [repo].
-/// Returns the container — caller must call [container.dispose] when done.
+/// Returns the container , caller must call [container.dispose] when done.
 ProviderContainer _makeContainer(_FakeWeatherRepository repo) {
   return ProviderContainer(
     overrides: [
@@ -111,7 +110,7 @@ void main() {
   // Initialisation
   // -------------------------------------------------------------------------
 
-  group('WeatherController — init', () {
+  group('WeatherController , init', () {
     test('starts in loading state', () {
       final repo = _FakeWeatherRepository();
       final container = _makeContainer(repo);
@@ -173,7 +172,7 @@ void main() {
   // Success state
   // -------------------------------------------------------------------------
 
-  group('WeatherController — success state', () {
+  group('WeatherController , success state', () {
     test('shows first page (20 items) when total > 20', () async {
       final repo = _FakeWeatherRepository(pokemonResult: _dummyPokemon(25));
       final container = _makeContainer(repo);
@@ -227,7 +226,7 @@ void main() {
   // Error states
   // -------------------------------------------------------------------------
 
-  group('WeatherController — error states', () {
+  group('WeatherController , error states', () {
     test('emits error state when weather fetch fails', () async {
       final repo = _FakeWeatherRepository(
         weatherError: Exception('network down'),
@@ -279,10 +278,10 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Pagination — loadMore
+  // Pagination , loadMore
   // -------------------------------------------------------------------------
 
-  group('WeatherController — loadMore', () {
+  group('WeatherController , loadMore', () {
     test('appends next page on loadMore', () async {
       final repo = _FakeWeatherRepository(pokemonResult: _dummyPokemon(25));
       final container = _makeContainer(repo);
@@ -348,7 +347,7 @@ void main() {
   // Coordinate handling
   // -------------------------------------------------------------------------
 
-  group('WeatherController — coordinates', () {
+  group('WeatherController , coordinates', () {
     test('fetchWeatherSuggestions uses provided lat/lon', () async {
       final repo = _FakeWeatherRepository();
       final container = _makeContainer(repo);
@@ -400,7 +399,7 @@ void main() {
       final controller = container.read(weatherControllerProvider.notifier);
       await controller.fetchWeatherSuggestions(lat: 51.5, lon: -0.1);
 
-      /// Retry — no lat/lon/randomise args.
+      /// Retry , no lat/lon/randomise args.
       await controller.fetchWeatherSuggestions();
 
       final state = container.read(weatherControllerProvider);

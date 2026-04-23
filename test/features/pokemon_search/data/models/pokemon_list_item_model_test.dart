@@ -1,5 +1,5 @@
 /// Unit tests for [PokemonSummary.fromJson].
-/// All tests use static JSON maps — no network or Flutter dependencies.
+/// All tests use static JSON maps , no network or Flutter dependencies.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';

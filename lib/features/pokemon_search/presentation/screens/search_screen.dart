@@ -16,7 +16,7 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
 
-/// Stable widget keys for [SearchScreen] — used in widget tests.
+/// Stable widget keys for [SearchScreen] , used in widget tests.
 class SearchScreenKeys {
   static const searchBar = Key('search_bar');
   static const pokemonList = Key('search_pokemon_list');
@@ -25,7 +25,7 @@ class SearchScreenKeys {
   static const retryButton = Key('search_retry_button');
 }
 
-/// Root search screen widget — reads [pokemonSearchControllerProvider].
+/// Root search screen widget , reads [pokemonSearchControllerProvider].
 /// Uses [ConsumerStatefulWidget] to manage the [TextEditingController] and
 /// [ScrollController] lifecycles.
 class SearchScreen extends ConsumerStatefulWidget {
@@ -43,7 +43,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   /// Attached to the list to detect scroll position for pagination.
   late final ScrollController _scrollController;
 
-  /// Debounce timer — cancelled and restarted on every keystroke so the
+  /// Debounce timer , cancelled and restarted on every keystroke so the
   /// controller's search() is only called 300ms after the user stops typing.
   /// Without this, each character fires getPokemonList(limit:100) which spawns
   /// up to 100 concurrent detail requests per keystroke.
@@ -80,7 +80,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
-  /// Debounces search input — cancels pending timer and starts a new 300ms one.
+  /// Debounces search input , cancels pending timer and starts a new 300ms one.
   /// Only calls controller.search() after the user stops typing for 300ms,
   /// preventing up to 100 concurrent HTTP requests per keystroke.
   void _onSearchChanged(String query) {
@@ -153,7 +153,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         children: [
           _SearchBar(
             controller: _searchController,
-            /// Use debounced handler — prevents N concurrent requests per keystroke.
+            /// Use debounced handler , prevents N concurrent requests per keystroke.
             onChanged: _onSearchChanged,
           ),
           Expanded(
@@ -333,7 +333,7 @@ class _BookmarkNavButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    /// Watch bookmark count — rebuilds only when the list length changes.
+    /// Watch bookmark count , rebuilds only when the list length changes.
     final count = ref.watch(bookmarkNotifierProvider).length;
 
     return Stack(

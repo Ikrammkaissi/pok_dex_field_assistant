@@ -1,12 +1,12 @@
 /// Declarative route table for the app.
-/// All routes are defined here — widgets never reference path strings directly.
+/// All routes are defined here , widgets never reference path strings directly.
 import 'package:go_router/go_router.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/screens/bookmarks_screen.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/screens/detail_screen.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/screens/search_screen.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/screens/weather_pokemon_screen.dart';
 
-/// Route path constants — prevents magic strings in widgets.
+/// Route path constants , prevents magic strings in widgets.
 class AppRoutes {
   /// Path for the Pokémon search screen (app root).
   static const String search = '/';
@@ -33,14 +33,14 @@ final appRouter = GoRouter(
   /// Start at the search screen.
   initialLocation: AppRoutes.search,
   routes: [
-    /// Search screen — root of the app.
+    /// Search screen , root of the app.
     GoRoute(
       path: AppRoutes.search,
       /// Builder returns the search screen widget.
       builder: (context, state) => const SearchScreen(),
     ),
 
-    /// Detail screen — navigated to when a list tile is tapped.
+    /// Detail screen , navigated to when a list tile is tapped.
     GoRoute(
       path: AppRoutes.detail,
       /// Extract the :name path parameter and pass it to the screen.
@@ -50,13 +50,13 @@ final appRouter = GoRouter(
     ),
 
 
-    /// Weather suggestion screen — navigated to from the search screen AppBar button.
+    /// Weather suggestion screen , navigated to from the search screen AppBar button.
     GoRoute(
       path: AppRoutes.weather,
-      /// No path parameters — screen fetches its own weather on init.
+      /// No path parameters , screen fetches its own weather on init.
       builder: (context, state) => const WeatherPokemonScreen(),
     ),
-    /// Bookmarks screen — shows saved Pokémon.
+    /// Bookmarks screen , shows saved Pokémon.
     GoRoute(
       path: AppRoutes.bookmarks,
       builder: (context, state) => const BookmarksScreen(),

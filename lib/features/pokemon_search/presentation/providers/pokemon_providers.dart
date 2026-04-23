@@ -21,7 +21,7 @@ final pokemonDetailProvider =
 /// Uses [StateNotifierProvider] so widgets rebuild on state changes.
 final pokemonSearchControllerProvider =
     StateNotifierProvider<PokemonSearchController, PokemonSearchState>((ref) {
-  /// Controller reads the repository — starts loading immediately on creation.
+  /// Controller reads the repository , starts loading immediately on creation.
   return PokemonSearchController(ref.watch(pokemonRepositoryProvider));
 });
 

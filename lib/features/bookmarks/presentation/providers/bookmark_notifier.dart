@@ -6,7 +6,7 @@ import 'package:pok_dex_field_assistant/features/bookmarks/data/bookmark_reposit
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
 /// Manages the bookmark list as Riverpod state.
-/// State is a plain list — ordered by insertion time.
+/// State is a plain list , ordered by insertion time.
 class BookmarkNotifier extends StateNotifier<List<PokemonSummary>> {
   /// Logger tag for this class.
   static const _tag = 'BookmarkNotifier';
@@ -16,7 +16,7 @@ class BookmarkNotifier extends StateNotifier<List<PokemonSummary>> {
 
   /// Initialises with empty state and immediately loads persisted bookmarks.
   BookmarkNotifier(this._repository) : super([]) {
-    AppLogger.debug(_tag, 'init — loading persisted bookmarks');
+    AppLogger.debug(_tag, 'init , loading persisted bookmarks');
     _load();
   }
 
@@ -30,7 +30,7 @@ class BookmarkNotifier extends StateNotifier<List<PokemonSummary>> {
   Future<void> toggle(PokemonSummary pokemon) async {
     final bookmarked = state.any((p) => p.name == pokemon.name);
     AppLogger.debug(_tag,
-        'toggle "${pokemon.name}" — ${bookmarked ? "removing" : "adding"}');
+        'toggle "${pokemon.name}" , ${bookmarked ? "removing" : "adding"}');
     final nextState = bookmarked
         ? state.where((p) => p.name != pokemon.name).toList()
         : [...state, pokemon];
@@ -40,7 +40,7 @@ class BookmarkNotifier extends StateNotifier<List<PokemonSummary>> {
 
     state = nextState;
     AppLogger.info(_tag,
-        'toggle complete — "${pokemon.name}" ${bookmarked ? "removed" : "added"}, total=${state.length}');
+        'toggle complete , "${pokemon.name}" ${bookmarked ? "removed" : "added"}, total=${state.length}');
   }
 
   /// Returns true if [pokemonName] is in the current bookmark list.

@@ -9,13 +9,13 @@ import 'package:pok_dex_field_assistant/features/weather/data/models/weather_mod
 /// silently wiping the previous error on every [copyWith] call that omits it.
 const _keep = _Sentinel();
 
-/// Private sentinel type — not exported; used only for [_keep].
+/// Private sentinel type , not exported; used only for [_keep].
 class _Sentinel {
   const _Sentinel();
 }
 
 /// Holds all UI-relevant state for the weather Pokémon suggestion flow.
-/// All fields are immutable — use [copyWith] to produce updated copies.
+/// All fields are immutable , use [copyWith] to produce updated copies.
 class WeatherState {
   /// True while the weather or Pokémon list is being fetched.
   final bool isLoading;
@@ -23,10 +23,10 @@ class WeatherState {
   /// Non-null when the last fetch failed; contains a human-readable message.
   final String? error;
 
-  /// Current weather snapshot — null until the first successful fetch.
+  /// Current weather snapshot , null until the first successful fetch.
   final WeatherData? weather;
 
-  /// Currently visible Pokémon slice — grows as user loads more pages.
+  /// Currently visible Pokémon slice , grows as user loads more pages.
   final List<PokemonSummary> pokemon;
 
   /// True when more Pokémon remain in the full type list beyond [pokemon].
@@ -59,11 +59,11 @@ class WeatherState {
   /// who do not pass [error] preserve the existing value.
   /// Pass `error: null` explicitly to clear a previous error.
   ///
-  /// Example — preserve error while setting isLoadingMore:
+  /// Example , preserve error while setting isLoadingMore:
   /// ```dart
   /// state = state.copyWith(isLoadingMore: true); // error unchanged
   /// ```
-  /// Example — clear error on success:
+  /// Example , clear error on success:
   /// ```dart
   /// state = state.copyWith(error: null, pokemon: items);
   /// ```

@@ -1,4 +1,4 @@
-/// Smoke test — verifies the search screen renders without throwing.
+/// Smoke test , verifies the search screen renders without throwing.
 /// Uses a fake repository so no real HTTP calls are made.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +11,7 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
-// Fake repository — returns two items with no HTTP calls.
+// Fake repository , returns two items with no HTTP calls.
 // ---------------------------------------------------------------------------
 
 /// In-memory fake used by widget tests to avoid real network access.

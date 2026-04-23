@@ -1,5 +1,5 @@
 /// Abstract contract and concrete implementation for Pokémon data operations.
-/// [PokemonRepository] is the interface callers depend on — swap impl in tests.
+/// [PokemonRepository] is the interface callers depend on , swap impl in tests.
 /// [PokemonRepositoryImpl] calls [PokeApiHttpClient] directly; no datasource layer.
 import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/core/network/http_client.dart';
@@ -18,12 +18,12 @@ abstract class PokemonRepository {
 }
 
 /// Implements [PokemonRepository] with paginated network calls.
-/// No global in-memory cache — the controller accumulates pages in state.
+/// No global in-memory cache , the controller accumulates pages in state.
 class PokemonRepositoryImpl implements PokemonRepository {
   /// Logger tag for this class.
   static const _tag = 'PokemonRepository';
 
-  /// HTTP client for PokéAPI calls — injected for testability.
+  /// HTTP client for PokéAPI calls , injected for testability.
   final PokeApiHttpClient _client;
 
   /// Creates a [PokemonRepositoryImpl] backed by [client].
@@ -36,7 +36,7 @@ class PokemonRepositoryImpl implements PokemonRepository {
   Future<PokemonListPage> getPokemonList(
       {int limit = 20, int offset = 0}) async {
     AppLogger.info(
-        _tag, 'Fetching page — limit=$limit offset=$offset from network');
+        _tag, 'Fetching page , limit=$limit offset=$offset from network');
     try {
       /// Single lightweight call to get name+url pairs for this page.
       final listJson =
@@ -55,11 +55,11 @@ class PokemonRepositoryImpl implements PokemonRepository {
         final name = entry['name'] as String;
         final apiUrl = entry['url'] as String;
 
-        /// Detail endpoint returns types — still needed; sprite derived from URL.
+        /// Detail endpoint returns types , still needed; sprite derived from URL.
         final detailJson = await _client.get('/pokemon/$name');
         final detail = PokemonDetail.fromJson(detailJson);
 
-        /// Derive sprite URL from the list entry's API URL — no extra request,
+        /// Derive sprite URL from the list entry's API URL , no extra request,
         /// no dependence on the detail JSON sprite field being non-null.
         return PokemonSummary(
           id: detail.id,
@@ -71,10 +71,10 @@ class PokemonRepositoryImpl implements PokemonRepository {
 
       final items = await Future.wait(futures);
       AppLogger.info(
-          _tag, 'Loaded ${items.length} Pokémon — hasMore=$hasMore');
+          _tag, 'Loaded ${items.length} Pokémon , hasMore=$hasMore');
       return PokemonListPage(items: items, hasMore: hasMore);
     } catch (e, s) {
-      /// Log unexpected failures before propagating — callers handle recovery.
+      /// Log unexpected failures before propagating , callers handle recovery.
       AppLogger.error(_tag, 'Failed to load Pokémon list',
           error: e, stackTrace: s);
       rethrow;
@@ -98,7 +98,7 @@ class PokemonRepositoryImpl implements PokemonRepository {
   }
 
   /// Fetches full detail for [nameOrId] directly from the network.
-  /// No caching — detail is loaded on demand.
+  /// No caching , detail is loaded on demand.
   @override
   Future<PokemonDetail> getPokemonDetail(String nameOrId) async {
     AppLogger.debug(_tag, 'Fetching detail for "$nameOrId"');

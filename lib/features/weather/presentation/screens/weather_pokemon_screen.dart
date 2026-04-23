@@ -9,7 +9,7 @@ import 'package:pok_dex_field_assistant/features/weather/data/models/weather_mod
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_providers.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
 
-/// Stable widget keys for [WeatherPokemonScreen] — used in widget tests.
+/// Stable widget keys for [WeatherPokemonScreen] , used in widget tests.
 class WeatherScreenKeys {
   /// Loading spinner shown while fetching weather and Pokémon.
   static const loadingIndicator = Key('weather_loading');
@@ -76,7 +76,7 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
 
   /// Triggers [WeatherController.loadMore] when the user reaches the list bottom.
   ///
-  /// Uses a threshold of 80px rather than exact `== 0` comparison — Flutter
+  /// Uses a threshold of 80px rather than exact `== 0` comparison , Flutter
   /// scroll physics produce fractional extents that may never equal zero exactly,
   /// silently preventing pagination. [loadMore] guards against concurrent calls.
   void _onScroll() {
@@ -96,7 +96,7 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
   /// Syncs text fields to new coordinates from state when they differ.
   /// Called in [build] so the fields reflect randomly generated coords on first load.
   void _syncFields(double lat, double lon) {
-    /// Only update when coords have actually changed — prevents cursor jumping while editing.
+    /// Only update when coords have actually changed , prevents cursor jumping while editing.
     if (lat != _syncedLat) {
       _syncedLat = lat;
       _latController.text = lat.toStringAsFixed(4);
@@ -147,7 +147,7 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
       ),
       body: Column(
         children: [
-          /// Editable coordinate fields — allow manual location override.
+          /// Editable coordinate fields , allow manual location override.
           _CoordinateFields(
             latController: _latController,
             lonController: _lonController,
@@ -201,7 +201,7 @@ class _CoordinateFields extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Row(
         children: [
-          /// Latitude field — takes up ~40% of the row.
+          /// Latitude field , takes up ~40% of the row.
           Expanded(
             flex: 4,
             child: _CoordTextField(
@@ -213,7 +213,7 @@ class _CoordinateFields extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          /// Longitude field — takes up ~40% of the row.
+          /// Longitude field , takes up ~40% of the row.
           Expanded(
             flex: 4,
             child: _CoordTextField(
@@ -225,7 +225,7 @@ class _CoordinateFields extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          /// Apply button — submits the current field values.
+          /// Apply button , submits the current field values.
           FilledButton(
             key: WeatherScreenKeys.goButton,
             onPressed: isLoading ? null : onApply,
@@ -323,7 +323,7 @@ class _WeatherContent extends StatelessWidget {
 
     final weather = state.weather;
 
-    /// Fallback — shown briefly before the first auto-fetch completes.
+    /// Fallback , shown briefly before the first auto-fetch completes.
     if (weather == null) {
       return const Center(child: Text('Fetching weather…'));
     }
@@ -414,7 +414,7 @@ class _WeatherCard extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            /// Type suggestion row — chip highlights the mapped Pokémon type.
+            /// Type suggestion row , chip highlights the mapped Pokémon type.
             Row(
               children: [
                 Text('Suggested type:', style: theme.textTheme.bodyMedium),

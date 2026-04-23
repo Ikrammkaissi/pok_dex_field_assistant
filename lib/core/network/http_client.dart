@@ -12,7 +12,7 @@ import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 
 /// Wraps [http.Client] with PokéAPI-scoped GET requests and typed error handling.
 class PokeApiHttpClient {
-  /// PokéAPI v2 base URL — all [get] paths are appended here.
+  /// PokéAPI v2 base URL , all [get] paths are appended here.
   static const _baseUrl = 'https://pokeapi.co/api/v2';
 
   /// Logger tag for this class.
@@ -21,7 +21,7 @@ class PokeApiHttpClient {
   /// Maximum time to wait for a response before throwing [NetworkException].
   static const _timeout = Duration(seconds: 15);
 
-  /// The underlying HTTP client — injected so tests can substitute a fake.
+  /// The underlying HTTP client , injected so tests can substitute a fake.
   final http.Client _client;
 
   /// Creates a [PokeApiHttpClient] backed by [client].
@@ -40,7 +40,7 @@ class PokeApiHttpClient {
     final uri = Uri.parse('$_baseUrl$path');
 
     try {
-      /// Send request — times out after [_timeout]; SocketException on no network.
+      /// Send request , times out after [_timeout]; SocketException on no network.
       final response = await _client.get(uri).timeout(_timeout);
 
       /// Treat any 2xx status code as success.
@@ -50,30 +50,30 @@ class PokeApiHttpClient {
       }
 
       /// Non-2xx means a server-side error.
-      AppLogger.warning(_tag, 'Server error ${response.statusCode} — $path');
+      AppLogger.warning(_tag, 'Server error ${response.statusCode} , $path');
       throw ServerException(
         statusCode: response.statusCode,
         message: 'HTTP ${response.statusCode} for $path',
       );
     } on TimeoutException catch (e, s) {
-      /// Request exceeded [_timeout] — treat as a network failure.
-      AppLogger.error(_tag, 'Timeout — $path', error: e, stackTrace: s);
+      /// Request exceeded [_timeout] , treat as a network failure.
+      AppLogger.error(_tag, 'Timeout , $path', error: e, stackTrace: s);
       throw NetworkException('Request timed out.');
     } on SocketException catch (e, s) {
       /// No connectivity, DNS failure, or connection refused.
-      AppLogger.error(_tag, 'Network failure — $path',
+      AppLogger.error(_tag, 'Network failure , $path',
           error: e, stackTrace: s);
       throw NetworkException('Network error: ${e.message}');
     } on ServerException {
-      /// Already typed and logged above — propagate unchanged.
+      /// Already typed and logged above , propagate unchanged.
       rethrow;
     } on ParseException catch (e, s) {
       /// Log parse failures so we know which endpoint returned bad JSON.
-      AppLogger.error(_tag, 'Parse failure — $path', error: e, stackTrace: s);
+      AppLogger.error(_tag, 'Parse failure , $path', error: e, stackTrace: s);
       rethrow;
     } catch (e, s) {
       /// Catch-all for TLS failures and other unexpected errors.
-      AppLogger.error(_tag, 'Unexpected error — $path', error: e, stackTrace: s);
+      AppLogger.error(_tag, 'Unexpected error , $path', error: e, stackTrace: s);
       throw NetworkException('Unexpected error: $e');
     }
   }

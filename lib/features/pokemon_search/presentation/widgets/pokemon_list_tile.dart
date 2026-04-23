@@ -20,7 +20,7 @@ class PokemonListTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    /// Watch per-pokemon bookmark state — rebuilds only when this entry changes.
+    /// Watch per-pokemon bookmark state , rebuilds only when this entry changes.
     final bookmarked = ref.watch(isBookmarkedProvider(item.name));
 
     return Card(
@@ -29,7 +29,7 @@ class PokemonListTile extends ConsumerWidget {
         /// Navigate to the detail screen for this Pokémon.
         /// push preserves the previous screen in the stack so back button works.
         onTap: () => context.push(AppRoutes.detailFor(item.name)),
-        /// Sprite thumbnail — fixed 56×56 box; fallback icon on load failure.
+        /// Sprite thumbnail , fixed 56×56 box; fallback icon on load failure.
         leading: SizedBox(
           width: 56,
           height: 56,
@@ -56,7 +56,7 @@ class PokemonListTile extends ConsumerWidget {
               : '${toDisplayName(item.primaryType)}',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        /// Bookmark toggle button — filled icon when saved, outline when not.
+        /// Bookmark toggle button , filled icon when saved, outline when not.
         trailing: IconButton(
           tooltip: bookmarked ? 'Remove bookmark' : 'Bookmark',
           icon: Icon(

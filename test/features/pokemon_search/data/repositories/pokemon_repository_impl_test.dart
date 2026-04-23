@@ -1,5 +1,5 @@
 /// Unit tests for [PokemonRepositoryImpl].
-/// Uses a hand-written fake [http.Client] — no external mocking packages needed.
+/// Uses a hand-written fake [http.Client] , no external mocking packages needed.
 /// Tests state transitions in isolation; no real HTTP calls are made.
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +11,7 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/data/pokemon_rep
 // Static JSON fixtures
 // ---------------------------------------------------------------------------
 
-/// Minimal detail JSON for Bulbasaur — used for both list enrichment and detail fetch.
+/// Minimal detail JSON for Bulbasaur , used for both list enrichment and detail fetch.
 const _bulbasaurJson = <String, dynamic>{
   'id': 1,
   'name': 'bulbasaur',
@@ -62,7 +62,7 @@ const _listJsonWithMore = <String, dynamic>{
   ],
 };
 
-/// List-endpoint response where next is null — last page.
+/// List-endpoint response where next is null , last page.
 const _listJsonNoMore = <String, dynamic>{
   'count': 1350,
   'next': null,
@@ -102,7 +102,7 @@ class _FakeHttpClient extends http.BaseClient {
       return _response(_charmanderJson);
     }
 
-    /// Any unexpected URL is a test bug — fail loudly.
+    /// Any unexpected URL is a test bug , fail loudly.
     throw UnsupportedError('Unexpected URL in test: $url');
   }
 
@@ -154,7 +154,7 @@ void main() {
       expect(page.hasMore, isFalse);
     });
 
-    test('each call hits the network — no internal cache', () async {
+    test('each call hits the network , no internal cache', () async {
       /// Count HTTP calls across two getPokemonList calls.
       var callCount = 0;
       final client = _CountingFakeClient(

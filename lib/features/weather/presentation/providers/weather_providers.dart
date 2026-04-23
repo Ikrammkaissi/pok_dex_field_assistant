@@ -14,7 +14,7 @@ import 'package:pok_dex_field_assistant/features/weather/presentation/providers/
 /// Provides a single shared [WeatherHttpClient] backed by a real [http.Client].
 /// Override in tests with a fake client via [ProviderScope] overrides.
 final weatherHttpClientProvider = Provider<WeatherHttpClient>((ref) {
-  /// Create a long-lived http.Client — not recreated on every request.
+  /// Create a long-lived http.Client , not recreated on every request.
   final client = http.Client();
 
   /// Dispose the client when the provider scope is destroyed.
@@ -36,7 +36,7 @@ final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
 
 /// Provides [WeatherController] and exposes [WeatherState].
 /// Uses [autoDispose] so the controller is recreated (and re-fetches) each time
-/// the weather screen is opened — always shows fresh weather data.
+/// the weather screen is opened , always shows fresh weather data.
 final weatherControllerProvider =
     StateNotifierProvider.autoDispose<WeatherController, WeatherState>((ref) {
   /// Controller reads the repository and auto-fetches on construction.

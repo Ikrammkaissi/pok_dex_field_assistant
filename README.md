@@ -17,7 +17,7 @@ A Flutter app for searching Pokémon, viewing detailed stats, bookmarking favour
 | Android Studio / SDK | API 21+ | Android only |
 | Chrome | any | Web only |
 
-No API keys required. Uses [PokéAPI](https://pokeapi.co) and [Open-Meteo](https://open-meteo.com) — both public, no auth.
+No API keys required. Uses [PokéAPI](https://pokeapi.co) and [Open-Meteo](https://open-meteo.com) , both public, no auth.
 
 ### Initial setup
 
@@ -27,13 +27,52 @@ cd pok_dex_field_assistant
 flutter pub get
 ```
 
-iOS only — install CocoaPods dependencies after `pub get`:
+### Web
+
+**Debug** (Chrome, hot restart, DevTools available):
+
+```bash
+flutter run -d chrome
+```
+
+**Release** (minified, tree-shaken, production-ready):
+
+```bash
+flutter build web --release
+# Output: build/web/
+
+# Serve locally to verify the release build:
+cd build/web && python3 -m http.server 8080
+# Then open http://localhost:8080
+```
+iOS only : install CocoaPods dependencies after `pub get`:
 
 ```bash
 cd ios && pod install && cd ..
 ```
 
 ---
+
+### Web
+
+**Debug** (Chrome, hot restart, DevTools available):
+
+```bash
+flutter run -d chrome
+```
+
+**Release** (minified, tree-shaken, production-ready):
+
+```bash
+flutter build web --release
+# Output: build/web/
+
+# Serve locally to verify the release build:
+cd build/web && python3 -m http.server 8080
+# Then open http://localhost:8080
+```
+> **Note:** Audio cries (`audioplayers`) require HTTPS in production web deployments due to browser autoplay policy. Local `python3 -m http.server` is HTTP , cries may not play.
+
 
 ### Android
 
@@ -49,10 +88,10 @@ flutter run -d android
 flutter build apk --release
 # Output: build/app/outputs/flutter-apk/app-release.apk
 
-# Universal APK (all ABIs in one file — larger, good for local testing):
+# Universal APK (all ABIs in one file , larger, good for local testing):
 flutter build apk --release
 
-# Split by ABI (smaller per-device downloads — use for Play Store):
+# Split by ABI (smaller per-device downloads , use for Play Store):
 flutter build apk --release --split-per-abi
 # Output: app-armeabi-v7a-release.apk, app-arm64-v8a-release.apk, app-x86_64-release.apk
 
@@ -82,7 +121,7 @@ flutter run -d ios
 flutter build ios --release
 # Output: build/ios/iphoneos/Runner.app
 
-# For App Store distribution — open Xcode and archive:
+# For App Store distribution , open Xcode and archive:
 open ios/Runner.xcworkspace
 # Then: Product → Archive → Distribute App
 ```
@@ -91,28 +130,7 @@ open ios/Runner.xcworkspace
 
 ---
 
-### Web
 
-**Debug** (Chrome, hot restart, DevTools available):
-
-```bash
-flutter run -d chrome
-```
-
-**Release** (minified, tree-shaken, production-ready):
-
-```bash
-flutter build web --release
-# Output: build/web/
-
-# Serve locally to verify the release build:
-cd build/web && python3 -m http.server 8080
-# Then open http://localhost:8080
-```
-
-> **Note:** Audio cries (`audioplayers`) require HTTPS in production web deployments due to browser autoplay policy. Local `python3 -m http.server` is HTTP — cries may not play.
-
----
 
 ### Run on a specific device
 
@@ -128,7 +146,7 @@ flutter run -d <device-id>
 
 ### Run tests
 
-**Recommended — PowerShell script** (generates timestamped reports):
+**Recommended : PowerShell script** (generates timestamped reports):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tool\run_tests.ps1
@@ -149,7 +167,7 @@ Skip HTML generation if `genhtml` is not installed:
 powershell -ExecutionPolicy Bypass -File .\tool\run_tests.ps1 -SkipHtmlCoverage
 ```
 
-**Manual — single commands:**
+**Manual : single commands:**
 
 ```bash
 # All tests:
@@ -208,7 +226,7 @@ lib/
 
 Each feature has its own provider file. Cross-feature data flows only from data-layer providers (e.g. `bookmarkRepositoryProvider` is imported by the bookmark notifier, not the search screen).
 
-`StateNotifier` is used for mutable controller state. Riverpod 3.x deprecates `StateNotifier` in favour of `Notifier`/`AsyncNotifier` — migration is pending (see Known Issues).
+`StateNotifier` is used for mutable controller state. Riverpod 3.x deprecates `StateNotifier` in favour of `Notifier`/`AsyncNotifier` , migration is pending .
 
 ---
 
@@ -219,17 +237,17 @@ test/
   features/
     pokemon_search/
       data/models/          # PokemonSummary.fromJson, PokemonDetail.fromJson, MoveEntry.fromJson
-      data/repositories/    # getPokemonList, getPokemonDetail — fake HTTP client
+      data/repositories/    # getPokemonList, getPokemonDetail , fake HTTP client
       presentation/providers/ # init, loadMore, loadPrevious, search, retry, all error paths
     weather/
       data/models/          # fromJson, conditionLabel, suggestedPokemonType, conditionIcon
       data/repositories/    # getCurrentWeather, getPokemonByType (success + error paths)
       presentation/providers/ # fetch, loadMore, coordinate validation, error handling
-      presentation/screens/ # loading, success, error, coord fields, shuffle — widget tests
+      presentation/screens/ # loading, success, error, coord fields, shuffle , widget tests
   widget_test.dart          # App smoke test: AppBar, list, search bar render
 ```
 
-Repositories are tested with a `FakeHttpClient` that returns fixture JSON — no real HTTP calls. Controllers are tested by overriding providers in a `ProviderContainer` and asserting state transitions.
+Repositories are tested with a `FakeHttpClient` that returns fixture JSON , no real HTTP calls. Controllers are tested by overriding providers in a `ProviderContainer` and asserting state transitions.
 
 Coverage gaps: `WeatherHttpClient` unit tests and full `SearchScreen` widget tests are pending.
 
@@ -258,20 +276,42 @@ No `Semantics` labels on sprite images, stat bars, or type chips. Screen readers
 **7. Localisation**
 All user-facing strings are hardcoded English. Would wire `flutter_localizations` + ARB files.
 
+**8. Dev / prod environment separation**
+No environment layer exists. API base URLs, log levels, and timeouts are hardcoded in source. Flutter's `--dart-define` mechanism requires no extra packages:
+
+```bash
+flutter run   --dart-define=ENV=dev  --dart-define=LOG_LEVEL=debug
+flutter build --dart-define=ENV=prod --dart-define=LOG_LEVEL=warning --release
+```
+
+A single `AppEnv` class reads these at compile time, HTTP clients pull base URLs from it, and `AppLogger` respects the level. `.vscode/launch.json` launch configs let new devs pick an environment from a dropdown , no manual flags. Pointing `POKE_API_BASE` at a local mock server then enables fully offline development with zero source changes.
+
+**9. Design system : theme, typography, and tokens**
+The current theme is a single file ([`lib/app/theme.dart`](lib/app/theme.dart)) with one seed colour and no custom typography or spacing scale:
+
+```dart
+final appTheme = ThemeData(
+  useMaterial3: true,
+  colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFCC0000)),
+);
+```
+
+Everything else (font sizes, weights, paddings, border radii, icon sizes) is hardcoded inline at each call site , no shared constants, no token layer. Problems this causes:
+
+- **No single source of truth.** Changing the base font size means hunting every `fontSize: 12` across every file.
+- **No dark-mode colour overrides.** `ColorScheme.fromSeed` auto-generates a light scheme only. A dark scheme needs a second `ColorScheme.fromSeed(..., brightness: Brightness.dark)` and a `ThemeData.dark()` counterpart wired into `MaterialApp.darkTheme`.
+- **No custom `TextTheme`.** All typography falls back to Material 3 defaults. A Pokédex benefits from a distinct type scale: a condensed display font for dex numbers, a bold title font for Pokémon names, and a compact body font for stat values.
+- **Magic numbers everywhere.** Padding values like `EdgeInsets.all(16)`, `EdgeInsets.symmetric(horizontal: 12, vertical: 4)`, border radius like `BorderRadius.circular(12)` are repeated at dozens of call sites with no semantic name.
+
+This gives one place to change any visual property, makes dark mode trivial to add, and removes all magic numbers from widget code.
+
 ---
 
 ## Known Issues & Unsupported Edge Cases
 
-**`StateNotifier` deprecation warnings.** `flutter analyze` surfaces deprecation warnings for all three `StateNotifier` subclasses. They are functional but will block a future Riverpod major upgrade.
+**Search is client-side only — no API search endpoint.** PokéAPI has no search or filter endpoint. Searching fetches pages from offset 0 and filters results in memory. Rare or late-dex Pokémon (e.g. "Eternatus") may require many auto-fetched pages before appearing, or return no results if the sliding window is exhausted before their name is reached. Clearing the search resets to browse mode from scratch.
 
 **Weather screen requires manual coordinates.** There is no GPS/location-services integration. The user must type latitude and longitude manually, or tap "Randomise" for a random location.
 
-**Forms without a Pokémon of that type.** If Open-Meteo returns a weather condition that maps to a type with zero Pokémon in the API (e.g. very rare types), the weather screen shows an empty list with no explanation.
+**Forms without a Pokémon of that type.** If Open-Meteo returns a weather condition that maps to a type with zero Pokémon in the API , the weather screen shows an empty list with no explanation.
 
-**Audio cries.** Pokémon cry playback uses OGG URLs from PokéAPI. Some older Pokémon (Gen I–V) have cries; many Gen VI+ entries have no cry URL and the card silently hides those buttons. No fallback audio.
-
-**Pokémon with no front-default sprite.** Sprite URL is derived from the list entry ID. A small number of alternate forms return a broken image — the error widget (pokéball icon) handles this gracefully but without explanation.
-
-**Sliding window and bookmarks.** Bookmarks store the full `PokemonSummary` snapshot at toggle time. If the window slides and the bookmarked item scrolls out of the raw window, the bookmark remains valid (it stores the data, not a reference). But searching for a bookmarked Pokémon while the window does not contain it may show no results until more pages are fetched.
-
-**No tablet / large-screen layout.** All screens are designed for phone portrait. Landscape and tablet layouts are unsupported — the list and detail screens will stretch but are not adapted.

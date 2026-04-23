@@ -1,5 +1,5 @@
 /// Unit tests for [WeatherRepositoryImpl].
-/// Uses hand-written fake [http.BaseClient] subclasses — no external mocking.
+/// Uses hand-written fake [http.BaseClient] subclasses , no external mocking.
 /// Both HTTP clients (weather + PokeAPI) are injected with fakes so no real
 /// network calls are made.
 import 'dart:convert';
@@ -84,15 +84,15 @@ const _mixedTypeJson = <String, dynamic>{
 // Fake HTTP clients
 // ---------------------------------------------------------------------------
 
-/// Fake for the open-meteo [WeatherHttpClient] — returns a pre-baked response.
+/// Fake for the open-meteo [WeatherHttpClient] , returns a pre-baked response.
 class _FakeWeatherClient extends http.BaseClient {
   /// Fixed JSON body returned for all requests.
   final Map<String, dynamic> body;
 
-  /// HTTP status code to return — use non-2xx to simulate server errors.
+  /// HTTP status code to return , use non-2xx to simulate server errors.
   final int statusCode;
 
-  /// Last URI received — lets tests assert on the URL that was called.
+  /// Last URI received , lets tests assert on the URL that was called.
   Uri? lastUri;
 
   _FakeWeatherClient({required this.body, this.statusCode = 200});
@@ -117,12 +117,12 @@ class _NetworkErrorClient extends http.BaseClient {
   }
 }
 
-/// Fake for the PokéAPI [PokeApiHttpClient] — returns a pre-baked type response.
+/// Fake for the PokéAPI [PokeApiHttpClient] , returns a pre-baked type response.
 class _FakePokeClient extends http.BaseClient {
   /// Fixed JSON body returned for all requests.
   final Map<String, dynamic> body;
 
-  /// Last URI received — lets tests assert on the URL that was called.
+  /// Last URI received , lets tests assert on the URL that was called.
   Uri? lastUri;
 
   _FakePokeClient(this.body);

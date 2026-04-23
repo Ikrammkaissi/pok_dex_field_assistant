@@ -1,6 +1,6 @@
 /// App entry point.
 /// Initialises [SharedPreferences] before [runApp] so the bookmark provider
-/// has a synchronous value — no loading gap at startup.
+/// has a synchronous value , no loading gap at startup.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,11 +12,11 @@ import 'package:pok_dex_field_assistant/features/bookmarks/presentation/provider
 void main() async {
   /// Required before any plugin (SharedPreferences) call in main.
   WidgetsFlutterBinding.ensureInitialized();
-  AppLogger.info('App', 'startup — initialising SharedPreferences');
+  AppLogger.info('App', 'startup , initialising SharedPreferences');
 
   /// Fetch the platform prefs instance once; pass it to the provider tree.
   final prefs = await SharedPreferences.getInstance();
-  AppLogger.info('App', 'SharedPreferences ready — launching app');
+  AppLogger.info('App', 'SharedPreferences ready , launching app');
 
   runApp(
     ProviderScope(

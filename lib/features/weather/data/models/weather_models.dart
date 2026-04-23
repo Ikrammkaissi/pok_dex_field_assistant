@@ -86,32 +86,32 @@ class WeatherData {
   /// 8. Cool >10°C  → water
   /// 9. Cold ≤10°C  → ice
   String get suggestedPokemonType {
-    /// Thunderstorm — electric type thrives in storms.
+    /// Thunderstorm , electric type thrives in storms.
     if (weathercode >= 95) return 'electric';
 
-    /// Snowfall — ice type matches cold snowy weather.
+    /// Snowfall , ice type matches cold snowy weather.
     if (weathercode >= 71 && weathercode <= 77) return 'ice';
 
-    /// Rain or drizzle — water type fits rainy conditions.
+    /// Rain or drizzle , water type fits rainy conditions.
     if ((weathercode >= 51 && weathercode <= 67) ||
         (weathercode >= 80 && weathercode <= 82)) return 'water';
 
-    /// Fog — ghost type evokes misty, eerie atmosphere.
+    /// Fog , ghost type evokes misty, eerie atmosphere.
     if (weathercode >= 45 && weathercode <= 49) return 'ghost';
 
-    /// Strong wind — flying type suits breezy conditions.
+    /// Strong wind , flying type suits breezy conditions.
     if (windspeed > 30) return 'flying';
 
-    /// Very hot temperature — fire type loves the heat.
+    /// Very hot temperature , fire type loves the heat.
     if (temperature > 30) return 'fire';
 
-    /// Warm temperature — grass type thrives in mild warmth.
+    /// Warm temperature , grass type thrives in mild warmth.
     if (temperature > 20) return 'grass';
 
-    /// Cool temperature — water type prefers cooler climates.
+    /// Cool temperature , water type prefers cooler climates.
     if (temperature > 10) return 'water';
 
-    /// Cold temperature — ice type for near-freezing conditions.
+    /// Cold temperature , ice type for near-freezing conditions.
     return 'ice';
   }
 

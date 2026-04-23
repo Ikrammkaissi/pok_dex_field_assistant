@@ -1,4 +1,4 @@
-/// Search screen controller — owns async logic and state transitions.
+/// Search screen controller , owns async logic and state transitions.
 /// The UI layer reads state from Riverpod and calls methods here; it never
 /// talks to the repository directly.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +28,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   /// Logger tag for this class.
   static const _tag = 'SearchController';
 
-  /// Repository injected by the Riverpod provider — mockable in tests.
+  /// Repository injected by the Riverpod provider , mockable in tests.
   final PokemonRepository _repository;
 
   /// The current raw window of Pokémon.
@@ -71,7 +71,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
     final query = state.query;
     final previousVisibleCount = state.items.length;
     final nextOffset = _windowStartOffset + _window.length;
-    AppLogger.debug(_tag, 'loadMore — offset=$nextOffset, query="${state.query}"');
+    AppLogger.debug(_tag, 'loadMore , offset=$nextOffset, query="${state.query}"');
     state = state.copyWith(isLoadingMore: true);
     try {
       final page = await _repository.getPokemonList(
@@ -87,7 +87,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
 
       final items = _applyFilter(state.query);
       AppLogger.info(_tag,
-          'loadMore — raw=${_window.length}, visible=${items.length}, start=$_windowStartOffset, hasMore=${page.hasMore}');
+          'loadMore , raw=${_window.length}, visible=${items.length}, start=$_windowStartOffset, hasMore=${page.hasMore}');
       state = state.copyWith(
         items: items,
         isLoadingMore: false,
@@ -124,7 +124,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
     }
 
     final prevOffset = _windowStartOffset - _pageSize;
-    AppLogger.debug(_tag, 'loadPrevious — offset=$prevOffset');
+    AppLogger.debug(_tag, 'loadPrevious , offset=$prevOffset');
     state = state.copyWith(isLoadingPrevious: true);
     try {
       final page = await _repository.getPokemonList(
@@ -138,7 +138,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
       }
 
       AppLogger.info(_tag,
-          'loadPrevious — window=${_window.length} items, start=$_windowStartOffset');
+          'loadPrevious , window=${_window.length} items, start=$_windowStartOffset');
       state = state.copyWith(
         items: List.unmodifiable(_window),
         isLoadingPrevious: false,
@@ -161,7 +161,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   ///
   /// When [query] is cleared, reloads browse mode from the first page.
   Future<void> search(String query) async {
-    AppLogger.debug(_tag, 'search — query: "$query"');
+    AppLogger.debug(_tag, 'search , query: "$query"');
     if (query.isEmpty) {
       await _reloadBrowseFromScratch();
       return;
@@ -224,13 +224,13 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
 
   Future<void> _doInit() async {
     AppLogger.debug(
-        _tag, 'init — loading first batch (limit=$_initialPageSize, offset=0)');
+        _tag, 'init , loading first batch (limit=$_initialPageSize, offset=0)');
     _resetWindow();
     state = PokemonSearchState.initial();
     try {
       final page = await _fetchInitialPage();
       _applyInitialPageToState(page);
-      AppLogger.info(_tag, 'init complete — ${_window.length} items loaded');
+      AppLogger.info(_tag, 'init complete , ${_window.length} items loaded');
     } catch (e, s) {
       AppLogger.error(_tag, 'init failed', error: e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: _errorMessage(e));
@@ -248,7 +248,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
         !state.isLoadingMore &&
         state.error == null) {
       AppLogger.debug(_tag,
-          'autoFetch — only ${state.items.length} results, fetching more');
+          'autoFetch , only ${state.items.length} results, fetching more');
       await loadMore();
     }
   }
@@ -267,7 +267,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
         !state.isLoadingMore &&
         state.error == null) {
       AppLogger.debug(_tag,
-          'autoFetchVisibleHit — still at ${state.items.length} results, fetching more');
+          'autoFetchVisibleHit , still at ${state.items.length} results, fetching more');
       await loadMore();
     }
   }
@@ -335,7 +335,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   String _errorMessage(Object e) {
     if (e is NetworkException) return 'No internet connection.';
     if (e is ServerException) return 'Server error (${e.statusCode}).';
-    if (e is ParseException) return 'Data error — please try again.';
+    if (e is ParseException) return 'Data error , please try again.';
     return 'Something went wrong.';
   }
 }

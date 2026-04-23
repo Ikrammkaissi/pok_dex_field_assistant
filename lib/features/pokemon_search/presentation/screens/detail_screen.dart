@@ -1,4 +1,4 @@
-/// Full Pokémon detail screen — shown when a list tile is tapped.
+/// Full Pokémon detail screen , shown when a list tile is tapped.
 /// Fetches data via [pokemonDetailProvider] and renders stats, types,
 /// abilities, height, weight, and a large official artwork image.
 import 'dart:async';
@@ -12,7 +12,7 @@ import 'package:pok_dex_field_assistant/features/bookmarks/presentation/provider
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 
-/// Stat display labels — prettier than the raw API stat names.
+/// Stat display labels , prettier than the raw API stat names.
 const _statLabels = <String, String>{
   'hp': 'HP',
   'attack': 'Atk',
@@ -23,7 +23,7 @@ const _statLabels = <String, String>{
 };
 
 /// Detail screen for a single Pokémon identified by [pokemonName].
-/// Loaded via GoRouter path parameter — no data passed directly.
+/// Loaded via GoRouter path parameter , no data passed directly.
 class DetailScreen extends ConsumerWidget {
   /// Lowercase hyphenated Pokémon name used to fetch detail.
   final String pokemonName;
@@ -33,7 +33,7 @@ class DetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    /// Watch the async detail fetch — rebuilds on loading/data/error.
+    /// Watch the async detail fetch , rebuilds on loading/data/error.
     final detailAsync = ref.watch(pokemonDetailProvider(pokemonName));
 
     /// Watch per-pokemon bookmark state for the AppBar icon.
@@ -48,7 +48,7 @@ class DetailScreen extends ConsumerWidget {
           orElse: () => Text(toDisplayName(pokemonName)),
         ),
         actions: [
-          /// Bookmark toggle — only active once detail data is available
+          /// Bookmark toggle , only active once detail data is available
           /// so we have the id and spriteUrl needed to construct the summary.
           detailAsync.maybeWhen(
             data: (detail) => IconButton(
@@ -72,10 +72,10 @@ class DetailScreen extends ConsumerWidget {
         ],
       ),
       body: detailAsync.when(
-        /// Loading state — centred spinner.
+        /// Loading state , centred spinner.
         loading: () => const Center(child: CircularProgressIndicator()),
 
-        /// Error state — message and retry button.
+        /// Error state , message and retry button.
         error: (err, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -95,7 +95,7 @@ class DetailScreen extends ConsumerWidget {
           ),
         ),
 
-        /// Data state — full detail layout.
+        /// Data state , full detail layout.
         data: (detail) => _DetailBody(detail: detail),
       ),
     );
@@ -155,14 +155,14 @@ class _DetailBodyState extends State<_DetailBody> {
           ),
           const SizedBox(height: 16),
 
-          /// Cry audio player — latest and legacy sounds.
+          /// Cry audio player , latest and legacy sounds.
           _CriesCard(
             latestUrl: detail.cryLatestUrl,
             legacyUrl: detail.cryLegacyUrl,
           ),
           const SizedBox(height: 16),
 
-          /// Sprite gallery — normal or shiny variants matching hero image mode.
+          /// Sprite gallery , normal or shiny variants matching hero image mode.
           _SpriteGallery(
             frontDefault: detail.spriteUrl,
             backDefault: detail.backSpriteUrl,
@@ -172,7 +172,7 @@ class _DetailBodyState extends State<_DetailBody> {
           ),
           const SizedBox(height: 16),
 
-          /// Abilities list — hidden ability flagged.
+          /// Abilities list , hidden ability flagged.
           _AbilitiesCard(abilities: detail.abilities),
           const SizedBox(height: 16),
 
@@ -218,7 +218,7 @@ class _HeroImage extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           SizedBox(
-            /// Fixed size — prominent but fits small phones.
+            /// Fixed size , prominent but fits small phones.
             width: 220,
             height: 220,
             child: CachedNetworkImage(
@@ -233,7 +233,7 @@ class _HeroImage extends StatelessWidget {
             ),
           ),
 
-          /// Shiny toggle — bottom-right corner of the image box.
+          /// Shiny toggle , bottom-right corner of the image box.
           Positioned(
             bottom: 0,
             right: 0,
@@ -305,7 +305,7 @@ class _TypeChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    /// Computed once per build — shared across all type chips in this row.
+    /// Computed once per build , shared across all type chips in this row.
     final labelStyle = TextStyle(
       color: scheme.onSecondaryContainer,
       fontWeight: FontWeight.bold,
@@ -331,10 +331,10 @@ class _TypeChips extends StatelessWidget {
 
 /// Four-column card: height, weight, base experience, and move count.
 class _PhysicalStats extends StatelessWidget {
-  /// Height in decimetres (PokéAPI unit — divide by 10 for metres).
+  /// Height in decimetres (PokéAPI unit , divide by 10 for metres).
   final int height;
 
-  /// Weight in hectograms (PokéAPI unit — divide by 10 for kg).
+  /// Weight in hectograms (PokéAPI unit , divide by 10 for kg).
   final int weight;
 
   /// Base experience awarded when this Pokémon is defeated in battle.
@@ -374,14 +374,14 @@ class _PhysicalStats extends StatelessWidget {
               icon: Icons.monitor_weight_outlined,
             ),
             const VerticalDivider(width: 1),
-            /// Base XP — experience points gained by defeating this Pokémon.
+            /// Base XP , experience points gained by defeating this Pokémon.
             _StatItem(
               label: 'Base XP',
               value: '$baseExperience',
               icon: Icons.star_outline,
             ),
             const VerticalDivider(width: 1),
-            /// Move count — total learnable moves.
+            /// Move count , total learnable moves.
             _StatItem(
               label: 'Moves',
               value: '$moveCount',
@@ -435,7 +435,7 @@ class _StatItem extends StatelessWidget {
 
 /// Horizontal scrollable row of small sprite variants.
 /// Card with play buttons for the latest and legacy Pokémon cry audio.
-/// Stateful — tracks playback state while using an injected audio dependency.
+/// Stateful , tracks playback state while using an injected audio dependency.
 class _CriesCard extends ConsumerStatefulWidget {
   /// Latest cry OGG URL (modern games).
   final String latestUrl;
@@ -461,7 +461,7 @@ class _CriesCardState extends ConsumerState<_CriesCard> {
 
   /// Subscription to [_player.onPlayerComplete].
   /// Cancelled before every new play and in [dispose] to prevent listener
-  /// accumulation — each [_toggle] call used to add a new listener without
+  /// accumulation , each [_toggle] call used to add a new listener without
   /// removing the old one, causing a memory leak and multiple setState calls
   /// per completion event.
   StreamSubscription<void>? _completeSub;
@@ -587,7 +587,7 @@ class _CryButton extends StatelessWidget {
   }
 }
 
-/// Shows front/back sprites — normal set or shiny set depending on [isShiny].
+/// Shows front/back sprites , normal set or shiny set depending on [isShiny].
 class _SpriteGallery extends StatelessWidget {
   /// Front-default sprite URL.
   final String frontDefault;
@@ -788,7 +788,7 @@ class _GameIndicesCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            /// Wrap chips — they flow to next line automatically.
+            /// Wrap chips , they flow to next line automatically.
             Wrap(
               spacing: 6,
               runSpacing: 4,
@@ -929,7 +929,7 @@ class _StatBar extends StatelessWidget {
   }
 
   /// Maps a 0–1 stat ratio to a theme-aware colour using [ColorScheme] only.
-  /// No hardcoded hues — all three tones are derived from the active seed:
+  /// No hardcoded hues , all three tones are derived from the active seed:
   ///   low  → [ColorScheme.error]     (semantic red, seed-adaptive)
   ///   mid  → [ColorScheme.tertiary]  (seed-generated warning tone)
   ///   high → [ColorScheme.secondary] (seed-generated positive tone)
@@ -965,10 +965,10 @@ class _MovesCard extends StatefulWidget {
 }
 
 class _MovesCardState extends State<_MovesCard> {
-  /// Grouped and sorted moves — computed once per unique [moves] list.
+  /// Grouped and sorted moves , computed once per unique [moves] list.
   late Map<String, List<MoveEntry>> _groups;
 
-  /// Ordered group keys — known methods first, unknowns appended.
+  /// Ordered group keys , known methods first, unknowns appended.
   late List<String> _orderedKeys;
 
   @override
@@ -1055,7 +1055,7 @@ class _MovesCardState extends State<_MovesCard> {
 
             /// One section per learn method.
             for (final key in orderedKeys) ...[
-              /// Section header — method label + group count.
+              /// Section header , method label + group count.
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 4),
                 child: Row(
@@ -1101,7 +1101,7 @@ class _MovesCardState extends State<_MovesCard> {
                       if (key == 'level-up')
                         DataCell(Text(
                           e.value.levelLearnedAt == 0
-                              ? '—'
+                              ? ','
                               : '${e.value.levelLearnedAt}',
                           style: valueStyle,
                         )),

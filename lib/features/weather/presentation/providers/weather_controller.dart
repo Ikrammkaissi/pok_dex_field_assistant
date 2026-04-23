@@ -20,7 +20,7 @@ class WeatherController extends StateNotifier<WeatherState> {
   /// Number of Pokémon shown per page in the list.
   static const _pageSize = 20;
 
-  /// Full Pokémon list for the current type — sliced into pages for display.
+  /// Full Pokémon list for the current type , sliced into pages for display.
   List<PokemonSummary> _allPokemon = [];
 
   /// Number of items from [_allPokemon] currently visible in [state.pokemon].
@@ -42,7 +42,7 @@ class WeatherController extends StateNotifier<WeatherState> {
   WeatherController(this._repository)
       : super(WeatherState(lat: _randomLat(), lon: _randomLon())) {
     AppLogger.debug(_tag,
-        'init — randomised coords lat=${state.lat.toStringAsFixed(4)}, lon=${state.lon.toStringAsFixed(4)}');
+        'init , randomised coords lat=${state.lat.toStringAsFixed(4)}, lon=${state.lon.toStringAsFixed(4)}');
     fetchWeatherSuggestions();
   }
 
@@ -73,19 +73,19 @@ class WeatherController extends StateNotifier<WeatherState> {
 
       if (parsedLat == null || parsedLon == null) {
         AppLogger.warning(_tag,
-            'fetchWeatherSuggestions — invalid input: rawLat="$rawLat" rawLon="$rawLon"');
+            'fetchWeatherSuggestions , invalid input: rawLat="$rawLat" rawLon="$rawLon"');
         state = state.copyWith(error: 'Enter valid numbers for lat and lon.');
         return;
       }
       if (parsedLat < -90 || parsedLat > 90) {
         AppLogger.warning(_tag,
-            'fetchWeatherSuggestions — lat out of range: $parsedLat');
+            'fetchWeatherSuggestions , lat out of range: $parsedLat');
         state = state.copyWith(error: 'Latitude must be between -90 and 90.');
         return;
       }
       if (parsedLon < -180 || parsedLon > 180) {
         AppLogger.warning(_tag,
-            'fetchWeatherSuggestions — lon out of range: $parsedLon');
+            'fetchWeatherSuggestions , lon out of range: $parsedLon');
         state = state.copyWith(error: 'Longitude must be between -180 and 180.');
         return;
       }
@@ -94,14 +94,14 @@ class WeatherController extends StateNotifier<WeatherState> {
       lon = parsedLon;
     }
 
-    /// Randomise flag wins — generate fresh coords regardless of other args.
+    /// Randomise flag wins , generate fresh coords regardless of other args.
     final useLat = randomise ? _randomLat() : (lat ?? state.lat);
     final useLon = randomise ? _randomLon() : (lon ?? state.lon);
 
     AppLogger.debug(_tag,
-        'fetchWeatherSuggestions — lat=${useLat.toStringAsFixed(4)}, lon=${useLon.toStringAsFixed(4)}, randomise=$randomise');
+        'fetchWeatherSuggestions , lat=${useLat.toStringAsFixed(4)}, lon=${useLon.toStringAsFixed(4)}, randomise=$randomise');
 
-    /// Reset to loading — clears error and pokemon list, preserves coordinates.
+    /// Reset to loading , clears error and pokemon list, preserves coordinates.
     state = WeatherState(isLoading: true, lat: useLat, lon: useLon);
 
     try {
@@ -114,18 +114,18 @@ class WeatherController extends StateNotifier<WeatherState> {
       /// Step 2: derive the Pokémon type from the weather conditions.
       final type = weather.suggestedPokemonType;
       AppLogger.info(_tag,
-          'weather fetched — condition="${weather.conditionLabel}", mapped type="$type"');
+          'weather fetched , condition="${weather.conditionLabel}", mapped type="$type"');
 
       /// Step 3: fetch full Pokémon list for the derived type.
       _allPokemon = await _repository.getPokemonByType(type);
 
-      /// Show only the first page — user scrolls to load more.
+      /// Show only the first page , user scrolls to load more.
       _visibleCount = math.min(_pageSize, _allPokemon.length);
 
       AppLogger.info(_tag,
-          'fetchWeatherSuggestions complete — type="$type", total=${_allPokemon.length}, visible=$_visibleCount, hasMore=${_visibleCount < _allPokemon.length}');
+          'fetchWeatherSuggestions complete , type="$type", total=${_allPokemon.length}, visible=$_visibleCount, hasMore=${_visibleCount < _allPokemon.length}');
 
-      /// Emit success — first page visible, hasMore signals more pages exist.
+      /// Emit success , first page visible, hasMore signals more pages exist.
       state = WeatherState(
         weather: weather,
         pokemon: _allPokemon.take(_visibleCount).toList(),
@@ -135,9 +135,9 @@ class WeatherController extends StateNotifier<WeatherState> {
       );
     } catch (e, s) {
       AppLogger.error(_tag,
-          'fetchWeatherSuggestions failed — lat=${useLat.toStringAsFixed(4)}, lon=${useLon.toStringAsFixed(4)}',
+          'fetchWeatherSuggestions failed , lat=${useLat.toStringAsFixed(4)}, lon=${useLon.toStringAsFixed(4)}',
           error: e, stackTrace: s);
-      /// Emit error state — screen shows retry button with user-friendly message.
+      /// Emit error state , screen shows retry button with user-friendly message.
       state = WeatherState(error: _errorMessage(e), lat: useLat, lon: useLon);
     }
   }
@@ -148,7 +148,7 @@ class WeatherController extends StateNotifier<WeatherState> {
   String _errorMessage(Object e) {
     if (e is NetworkException) return 'No internet connection.';
     if (e is ServerException) return 'Server error (${e.statusCode}).';
-    if (e is ParseException) return 'Data error — please try again.';
+    if (e is ParseException) return 'Data error , please try again.';
     return 'Something went wrong.';
   }
 
@@ -158,7 +158,7 @@ class WeatherController extends StateNotifier<WeatherState> {
     if (state.isLoadingMore || !state.hasMore) return;
 
     AppLogger.debug(_tag,
-        'loadMore — visible=$_visibleCount, total=${_allPokemon.length}');
+        'loadMore , visible=$_visibleCount, total=${_allPokemon.length}');
 
     /// Signal that the bottom spinner should appear.
     state = state.copyWith(isLoadingMore: true);
@@ -167,9 +167,9 @@ class WeatherController extends StateNotifier<WeatherState> {
     _visibleCount = math.min(_visibleCount + _pageSize, _allPokemon.length);
 
     AppLogger.info(_tag,
-        'loadMore complete — visible=$_visibleCount, hasMore=${_visibleCount < _allPokemon.length}');
+        'loadMore complete , visible=$_visibleCount, hasMore=${_visibleCount < _allPokemon.length}');
 
-    /// Emit new slice — synchronous since data is already in memory.
+    /// Emit new slice , synchronous since data is already in memory.
     state = state.copyWith(
       isLoadingMore: false,
       pokemon: _allPokemon.take(_visibleCount).toList(),
