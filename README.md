@@ -3,6 +3,9 @@
 A Flutter app for searching Pokémon, viewing detailed stats, bookmarking favourites, and getting weather-based Pokémon suggestions.
 
 ---
+## Notes
+Claude Code was used to accelerate development, while ensuring code quality,
+architecture, and decisions were reviewed and validated manually.
 
 ## Setup & Run
 
