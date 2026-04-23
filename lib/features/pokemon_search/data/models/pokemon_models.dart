@@ -63,6 +63,22 @@ class PokemonSummary {
     required this.spriteUrl,
   });
 
+  /// Serialises to a JSON map suitable for local storage (bookmarks).
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'spriteUrl': spriteUrl,
+      };
+
+  /// Deserialises from a locally-stored bookmark JSON map.
+  /// Distinct from [fromJson] which parses PokéAPI wire format.
+  factory PokemonSummary.fromBookmarkJson(Map<String, dynamic> json) =>
+      PokemonSummary(
+        id: json['id'] as int,
+        name: json['name'] as String,
+        spriteUrl: json['spriteUrl'] as String,
+      );
+
   /// Parses from a `/pokemon/{nameOrId}` JSON map.
   /// Throws [ParseException] if required fields are missing or wrong type.
   factory PokemonSummary.fromJson(Map<String, dynamic> json) {

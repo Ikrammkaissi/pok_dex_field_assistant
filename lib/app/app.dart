@@ -13,6 +13,7 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     /// Use [MaterialApp.router] so go_router controls navigation.
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       /// Displayed in the OS task switcher.
       title: 'Pokédex Field Assistant',
       /// Material 3 theme with Pokéball-red seed colour.
