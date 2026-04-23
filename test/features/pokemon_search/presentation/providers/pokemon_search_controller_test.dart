@@ -209,8 +209,6 @@ void main() {
       expect(state.isLoading, isFalse);
       expect(state.items.length, 100);
       expect(state.hasMore, isTrue);
-      expect(state.hasPrevious, isFalse);
-      expect(state.windowStartOffset, 0);
     });
 
     test('sets error message on NetworkException', () async {
@@ -229,7 +227,7 @@ void main() {
     });
   });
 
-  group('PokemonSearchController , loadMore (window growth)', () {
+  group('PokemonSearchController , loadMore (list growth)', () {
     late ProviderContainer container;
     late PokemonSearchController controller;
 
@@ -241,39 +239,24 @@ void main() {
 
     tearDown(() => container.dispose());
 
-    test('appends 30 items after the initial 100, no window shift', () async {
+    test('appends 30 items after the initial 100', () async {
       await controller.loadMore();
 
       final state = container.read(pokemonSearchControllerProvider);
 
       expect(state.items.length, 130);
-      expect(state.windowStartOffset, 0);
-      expect(state.hasPrevious, isFalse);
       expect(state.hasMore, isTrue);
     });
 
-    test('keeps growing in 30-item steps before hitting the window cap',
-        () async {
+    test('keeps growing in 30-item steps', () async {
       await controller.loadMore(); // 130
       await controller.loadMore(); // 160
+      await controller.loadMore(); // 190
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      expect(state.items.length, 160);
-      expect(state.windowStartOffset, 0);
-    });
-
-    test('3rd incremental load drops the leading 30 items and shifts start',
-        () async {
-      // 100 + 3×30 = 190 > _maxWindow(180) → drop leading 30 → 160 items, start=30
-      await _loadMoreTimes(controller, 3);
-
-      final state = container.read(pokemonSearchControllerProvider);
-
-      expect(state.items.length, 160);
-      expect(state.windowStartOffset, 30);
-      expect(state.hasPrevious, isTrue);
-      expect(state.items.first.name, 'pokemon-31');
+      expect(state.items.length, 190);
+      expect(state.items.first.name, 'pokemon-1');
     });
 
     test('no-op when hasMore is false', () async {
@@ -298,53 +281,6 @@ void main() {
     });
   });
 
-  group('PokemonSearchController , loadPrevious (window shift back)', () {
-    late ProviderContainer container;
-    late PokemonSearchController controller;
-
-    setUp(() async {
-      container = _makeContainer(_MultiPageRepository());
-      controller = container.read(pokemonSearchControllerProvider.notifier);
-      await controller.init(); // 1..100
-      await _loadMoreTimes(controller, 3); // 100+3×30=190>180 → drop30 → 160 items, start=30
-    });
-
-    tearDown(() => container.dispose());
-
-    test('setup: window at start=30, size=160', () {
-      final s = container.read(pokemonSearchControllerProvider);
-      expect(s.windowStartOffset, 30);
-      expect(s.items.length, 160);
-      expect(s.hasPrevious, isTrue);
-    });
-
-    test('loadPrevious prepends the prior 30 items and drops trailing to cap',
-        () async {
-      await controller.loadPrevious();
-
-      final state = container.read(pokemonSearchControllerProvider);
-
-      // Prepend 30 → 190 items; 190>180 → removeRange(180,190) → 180 items, start=0.
-      expect(state.windowStartOffset, 0);
-      expect(state.items.length, 180);
-      expect(state.hasPrevious, isFalse);
-      expect(state.items.first.name, 'pokemon-1');
-    });
-
-    test('loadPrevious no-op when at offset 0', () async {
-      await controller.loadPrevious(); // back to start
-      final stateAtOrigin = container.read(pokemonSearchControllerProvider);
-      expect(stateAtOrigin.hasPrevious, isFalse);
-
-      final sizeBefore = stateAtOrigin.items.length;
-      await controller.loadPrevious(); // should be no-op
-
-      expect(
-          container.read(pokemonSearchControllerProvider).items.length,
-          sizeBefore);
-    });
-  });
-
   group('PokemonSearchController , search', () {
     late ProviderContainer container;
     late PokemonSearchController controller;
@@ -365,7 +301,7 @@ void main() {
 
     tearDown(() => container.dispose());
 
-    test('empty query returns all window items', () async {
+    test('empty query returns all loaded items', () async {
       await controller.search('');
       expect(container.read(pokemonSearchControllerProvider).items.length, 5);
     });
@@ -391,13 +327,13 @@ void main() {
       expect(state.error, isNull);
     });
 
-    test('clearing query reloads browse mode from scratch', () async {
+    test('clearing query shows all loaded items without re-fetching', () async {
       await controller.search('char');
       await controller.search('');
       expect(container.read(pokemonSearchControllerProvider).items.length, 5);
     });
 
-    test('search restarts from index 0 and clearing reloads from offset 0',
+    test('clearing search shows all loaded items with no extra API call',
         () async {
       final repo = _MultiPageRepository();
       final container2 = _makeContainer(repo);
@@ -405,22 +341,21 @@ void main() {
       final ctrl2 =
           container2.read(pokemonSearchControllerProvider.notifier);
       await ctrl2.init();
-      await _loadMoreTimes(ctrl2, 7); // browse window starts at offset 30
+      await _loadMoreTimes(ctrl2, 3); // list grows to 190 items
 
       await ctrl2.search('pokemon-1');
 
       final searchState = container2.read(pokemonSearchControllerProvider);
-      expect(searchState.windowStartOffset, 0);
       expect(searchState.items.any((p) => p.name == 'pokemon-1'), isTrue);
       final callsBeforeClear = repo.callCount;
 
       await ctrl2.search('');
 
       final browseState = container2.read(pokemonSearchControllerProvider);
-      expect(browseState.windowStartOffset, 0);
-      expect(browseState.items.length, 100);
+      // All loaded items visible, no re-fetch.
+      expect(browseState.items.isNotEmpty, isTrue);
       expect(browseState.items.first.name, 'pokemon-1');
-      expect(repo.callCount, callsBeforeClear + 1);
+      expect(repo.callCount, callsBeforeClear); // zero new calls
     });
   });
 
@@ -449,14 +384,6 @@ void main() {
     });
 
     test('loadMore during search fetches more and applies filter', () async {
-      /// 5-item window; loadMore is no longer blocked during search.
-      final items = [
-        const PokemonSummary(id: 1, name: 'bulbasaur', spriteUrl: ''),
-        const PokemonSummary(id: 4, name: 'charmander', spriteUrl: ''),
-        const PokemonSummary(id: 7, name: 'squirtle', spriteUrl: ''),
-        const PokemonSummary(id: 25, name: 'pikachu', spriteUrl: ''),
-        const PokemonSummary(id: 6, name: 'charizard-extra', spriteUrl: ''),
-      ];
       final container2 =
           _makeContainer(_MultiPageRepository()); // 400 generic items
       addTearDown(container2.dispose);
@@ -469,25 +396,6 @@ void main() {
           container2.read(pokemonSearchControllerProvider).items.length;
       /// Auto-fetch should kick in when results < 20.
       expect(afterSearch, greaterThanOrEqualTo(1));
-    });
-
-    test('window does not slide during search', () async {
-      /// Load more during search , windowStartOffset should stay 0.
-      final container2 = _makeContainer(_MultiPageRepository());
-      addTearDown(container2.dispose);
-      final ctrl2 =
-          container2.read(pokemonSearchControllerProvider.notifier);
-      await ctrl2.init(); // initial 100
-
-      await ctrl2.search('pokemon'); // query active
-      /// Manually load more items while search is active.
-      await ctrl2.loadMore();
-      await ctrl2.loadMore();
-      await ctrl2.loadMore();
-
-      final state = container2.read(pokemonSearchControllerProvider);
-      /// Window must NOT have slid , offset stays at 0 during search.
-      expect(state.windowStartOffset, 0);
     });
 
     test('auto-fetch loads pages until minSearchResults reached', () async {
@@ -506,25 +414,26 @@ void main() {
       expect(state.items.every((p) => p.name.startsWith('rare')), isTrue);
     });
 
-    test('clearing search reloads the initial browse page',
+    test('clearing search shows all accumulated items without re-fetching',
         () async {
-      /// Use multi-page repo so clearing search triggers a fresh initial fetch.
-      final container2 = _makeContainer(_MultiPageRepository());
+      final repo = _MultiPageRepository();
+      final container2 = _makeContainer(repo);
       addTearDown(container2.dispose);
       final ctrl2 =
           container2.read(pokemonSearchControllerProvider.notifier);
-      await ctrl2.init(); // 100 raw
+      await ctrl2.init(); // 100 items
 
       await ctrl2.search('pokemon');
-      await _loadMoreTimes(ctrl2, 30); // raw window grows to 400 during search
+      await _loadMoreTimes(ctrl2, 3); // loads 90 more → 190 total in _items
+      final callsBeforeClear = repo.callCount;
 
-      /// Clear search , browse mode is fetched again from offset 0.
       await ctrl2.search('');
 
       final state = container2.read(pokemonSearchControllerProvider);
-      expect(state.items.length, 100);
+      // All 190 accumulated items visible — no re-fetch.
+      expect(state.items.length, 190);
       expect(state.query, '');
-      expect(state.windowStartOffset, 0);
+      expect(repo.callCount, callsBeforeClear); // zero new calls
     });
   });
 

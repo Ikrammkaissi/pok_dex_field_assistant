@@ -1,7 +1,6 @@
 /// Full Pokémon search screen.
 /// Displays a search bar, loading spinner, error state with retry,
-/// empty state, and a windowed list (max 300 items) that loads more on scroll
-/// in both directions and discards out-of-window pages.
+/// empty state, and a list that grows as the user scrolls.
 /// All data logic lives in [PokemonSearchController]; this file is pure UI.
 import 'dart:async';
 
@@ -56,27 +55,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _scrollController = ScrollController()..addListener(_onScroll);
   }
 
-  /// Triggers forward or backward page loads based on scroll proximity to
-  /// the list edges.
+  /// Triggers forward page load when the user nears the bottom of the list.
   ///
   /// Uses a threshold of 80px rather than exact `== 0` comparison because
   /// Flutter's scroll physics produce fractional pixel extents that may never
   /// equal exactly zero, silently preventing pagination from triggering.
-  /// [loadMore] and [loadPrevious] are both no-ops while a load is in flight
-  /// so multiple triggers during a slow deceleration are safe.
+  /// [loadMore] is a no-op while a load is in flight so multiple triggers
+  /// during a slow deceleration are safe.
   void _onScroll() {
     final pos = _scrollController.position;
-    final controller =
-        ref.read(pokemonSearchControllerProvider.notifier);
 
-    /// Within 80px of the bottom edge → load next page.
     if (pos.extentAfter < 80) {
-      controller.loadMore();
-    }
-
-    /// Within 80px of the top edge → load previous page.
-    if (pos.extentBefore < 80) {
-      controller.loadPrevious();
+      ref.read(pokemonSearchControllerProvider.notifier).loadMore();
     }
   }
 
@@ -103,31 +93,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(pokemonSearchControllerProvider);
     final controller = ref.read(pokemonSearchControllerProvider.notifier);
-
-    /// When the window slides forward (top items dropped), jump scroll up so
-    /// extentAfter > 0 and _onScroll doesn't immediately re-trigger loadMore.
-    /// When the window slides backward (bottom items dropped), jump scroll down
-    /// so extentBefore > 0 and _onScroll doesn't immediately re-trigger loadPrevious.
-    ref.listen<int>(
-      pokemonSearchControllerProvider.select((s) => s.windowStartOffset),
-      (prev, next) {
-        if (prev == null || next == prev) return;
-        if (!_scrollController.hasClients) return;
-        final pos = _scrollController.position;
-        final itemCount = ref.read(pokemonSearchControllerProvider).items.length;
-        if (itemCount == 0 || pos.maxScrollExtent <= 0) return;
-        final estimatedItemHeight = pos.maxScrollExtent / itemCount;
-        final delta = (next - prev).abs();
-        final newOffset = next > prev
-            // Slid forward: items dropped from top → jump up.
-            ? (pos.pixels - delta * estimatedItemHeight).clamp(
-                0.0, pos.maxScrollExtent)
-            // Slid backward: items dropped from bottom → jump down.
-            : (pos.pixels + delta * estimatedItemHeight).clamp(
-                0.0, pos.maxScrollExtent);
-        _scrollController.jumpTo(newOffset);
-      },
-    );
 
     return Scaffold(
       appBar: AppBar(
@@ -219,7 +184,7 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-/// Switches between loading, error, empty, and the windowed list.
+/// Switches between loading, error, empty, and the growing list.
 class _Content extends StatelessWidget {
   final PokemonSearchState state;
   final ScrollController scrollController;
@@ -246,10 +211,8 @@ class _Content extends StatelessWidget {
       return _EmptyView(query: state.query);
     }
 
-    /// Sentinel slots at index 0 (previous spinner) and end (next spinner).
-    final topSlot = state.isLoadingPrevious ? 1 : 0;
-    final bottomSlot = state.isLoadingMore ? 1 : 0;
-    final total = topSlot + state.items.length + bottomSlot;
+    /// Extra slot at end for the bottom loading spinner.
+    final total = state.items.length + (state.isLoadingMore ? 1 : 0);
 
     return ListView.builder(
       key: SearchScreenKeys.pokemonList,
@@ -257,18 +220,8 @@ class _Content extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 16),
       itemCount: total,
       itemBuilder: (context, index) {
-        /// Top spinner while fetching the previous page.
-        if (state.isLoadingPrevious && index == 0) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final itemIndex = index - topSlot;
-
         /// Bottom spinner while fetching the next page.
-        if (itemIndex >= state.items.length) {
+        if (index >= state.items.length) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(child: CircularProgressIndicator()),
@@ -277,7 +230,7 @@ class _Content extends StatelessWidget {
 
         /// RepaintBoundary isolates per-tile repaints from scroll-driven invalidations.
         return RepaintBoundary(
-          child: PokemonListTile(item: state.items[itemIndex]),
+          child: PokemonListTile(item: state.items[index]),
         );
       },
     );
