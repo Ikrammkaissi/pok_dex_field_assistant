@@ -1,6 +1,7 @@
 /// Riverpod provider declarations for the pokemon_search feature.
 /// Dependency graph:
 ///   httpClientProvider → pokemonRepositoryProvider → pokemonSearchControllerProvider
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:pok_dex_field_assistant/core/network/http_client.dart';
@@ -40,4 +41,12 @@ final pokemonSearchControllerProvider =
     StateNotifierProvider<PokemonSearchController, PokemonSearchState>((ref) {
   /// Controller reads the repository — starts loading immediately on creation.
   return PokemonSearchController(ref.watch(pokemonRepositoryProvider));
+});
+
+/// Provides an [AudioPlayer] for detail-screen cry playback.
+/// Auto-disposed so native resources are always released with the screen scope.
+final audioPlayerProvider = Provider.autoDispose<AudioPlayer>((ref) {
+  final player = AudioPlayer();
+  ref.onDispose(player.dispose);
+  return player;
 });

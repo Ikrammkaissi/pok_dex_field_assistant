@@ -436,8 +436,8 @@ class _StatItem extends StatelessWidget {
 
 /// Horizontal scrollable row of small sprite variants.
 /// Card with play buttons for the latest and legacy Pokémon cry audio.
-/// Stateful — owns [AudioPlayer] lifecycle and tracks playback state.
-class _CriesCard extends StatefulWidget {
+/// Stateful — tracks playback state while using an injected audio dependency.
+class _CriesCard extends ConsumerStatefulWidget {
   /// Latest cry OGG URL (modern games).
   final String latestUrl;
 
@@ -452,12 +452,10 @@ class _CriesCard extends StatefulWidget {
   });
 
   @override
-  State<_CriesCard> createState() => _CriesCardState();
+  ConsumerState<_CriesCard> createState() => _CriesCardState();
 }
 
-class _CriesCardState extends State<_CriesCard> {
-  /// Single player — only one cry plays at a time.
-  final _player = AudioPlayer();
+class _CriesCardState extends ConsumerState<_CriesCard> {
 
   /// Which cry is currently playing: 'latest', 'legacy', or null.
   String? _playing;
@@ -473,8 +471,6 @@ class _CriesCardState extends State<_CriesCard> {
   void dispose() {
     /// Cancel completion listener before releasing the player.
     _completeSub?.cancel();
-    /// Release native audio resources when widget leaves the tree.
-    _player.dispose();
     super.dispose();
   }
 
@@ -482,19 +478,20 @@ class _CriesCardState extends State<_CriesCard> {
   /// Cancels any previous [onPlayerComplete] subscription before registering
   /// a new one so only one listener exists at any time.
   Future<void> _toggle(String key, String url) async {
+    final player = ref.read(audioPlayerProvider);
     /// Always cancel before any state change to avoid stale listener firing.
     _completeSub?.cancel();
     _completeSub = null;
 
     if (_playing == key) {
-      await _player.stop();
+      await player.stop();
       setState(() => _playing = null);
     } else {
-      await _player.stop();
-      await _player.play(UrlSource(url));
+      await player.stop();
+      await player.play(UrlSource(url));
       setState(() => _playing = key);
       /// Register exactly one completion listener for this play session.
-      _completeSub = _player.onPlayerComplete.listen((_) {
+      _completeSub = player.onPlayerComplete.listen((_) {
         if (mounted) setState(() => _playing = null);
       });
     }
@@ -502,6 +499,8 @@ class _CriesCardState extends State<_CriesCard> {
 
   @override
   Widget build(BuildContext context) {
+    /// Keep provider alive while this widget is mounted.
+    ref.watch(audioPlayerProvider);
     final hasBoth =
         widget.latestUrl.isNotEmpty && widget.legacyUrl.isNotEmpty;
     final hasAny =
