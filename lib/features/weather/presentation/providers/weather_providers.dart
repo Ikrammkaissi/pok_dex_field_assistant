@@ -6,7 +6,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:pok_dex_field_assistant/core/network/weather_http_client.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/providers/pokemon_data_providers.dart';
 import 'package:pok_dex_field_assistant/features/weather/data/weather_repository.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_controller.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
