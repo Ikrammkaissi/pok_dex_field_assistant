@@ -66,7 +66,7 @@ lib/
         screens/    # WeatherPokemonScreen
 ```
 
-**State management:** Riverpod `StateNotifier`. Each feature owns its provider file. `StateNotifier` is deprecated in Riverpod 2.x — migration to `Notifier`/`AsyncNotifier` is a known next step.
+**State management:** Riverpod `StateNotifier`. Each feature owns its provider file. 
 
 **APIs:** [PokéAPI v2](https://pokeapi.co) + [Open-Meteo](https://open-meteo.com) — both public, no auth.
 
