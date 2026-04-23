@@ -57,5 +57,5 @@ app.*.map.json
 
 #claude code related
 *.md
-claude/
+
 docs/

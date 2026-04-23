@@ -1,13 +1,15 @@
-/// A single row in the Pokémon search list.
-/// Shows the sprite thumbnail, name, and dex number.
+/// A single row in the Pokémon search/bookmarks list.
+/// Shows the sprite thumbnail, name, dex number, and a bookmark toggle icon.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pok_dex_field_assistant/app/router.dart';
+import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
-/// Stateless card row for one [PokemonSummary].
-/// Pure UI — no state, no providers.
-class PokemonListTile extends StatelessWidget {
+/// Card row for one [PokemonSummary] with an inline bookmark toggle.
+/// Uses [ConsumerWidget] to watch [isBookmarkedProvider] without lifting state.
+class PokemonListTile extends ConsumerWidget {
   /// The Pokémon data to display.
   final PokemonSummary item;
 
@@ -15,12 +17,15 @@ class PokemonListTile extends StatelessWidget {
   const PokemonListTile({super.key, required this.item});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    /// Watch per-pokemon bookmark state — rebuilds only when this entry changes.
+    final bookmarked = ref.watch(isBookmarkedProvider(item.name));
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ListTile(
         /// Navigate to the detail screen for this Pokémon.
-        /// push preserves the search screen in the stack so back button works.
+        /// push preserves the previous screen in the stack so back button works.
         onTap: () => context.push(AppRoutes.detailFor(item.name)),
         /// Sprite thumbnail — fixed 56×56 box; fallback icon on load failure.
         leading: SizedBox(
@@ -46,6 +51,18 @@ class PokemonListTile extends StatelessWidget {
         subtitle: Text(
           '#${item.id.toString().padLeft(3, '0')}',
           style: Theme.of(context).textTheme.bodySmall,
+        ),
+        /// Bookmark toggle button — filled icon when saved, outline when not.
+        trailing: IconButton(
+          tooltip: bookmarked ? 'Remove bookmark' : 'Bookmark',
+          icon: Icon(
+            bookmarked ? Icons.bookmark : Icons.bookmark_border,
+            color: bookmarked
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.outline,
+          ),
+          onPressed: () =>
+              ref.read(bookmarkNotifierProvider.notifier).toggle(item),
         ),
       ),
     );

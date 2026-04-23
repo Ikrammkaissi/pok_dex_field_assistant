@@ -4,6 +4,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 
@@ -31,6 +32,9 @@ class DetailScreen extends ConsumerWidget {
     /// Watch the async detail fetch — rebuilds on loading/data/error.
     final detailAsync = ref.watch(pokemonDetailProvider(pokemonName));
 
+    /// Watch per-pokemon bookmark state for the AppBar icon.
+    final bookmarked = ref.watch(isBookmarkedProvider(pokemonName));
+
     return Scaffold(
       /// AppBar title shows while loading and on error.
       appBar: AppBar(
@@ -39,6 +43,28 @@ class DetailScreen extends ConsumerWidget {
           data: (d) => Text(_displayName(d.name)),
           orElse: () => Text(_displayName(pokemonName)),
         ),
+        actions: [
+          /// Bookmark toggle — only active once detail data is available
+          /// so we have the id and spriteUrl needed to construct the summary.
+          detailAsync.maybeWhen(
+            data: (detail) => IconButton(
+              tooltip: bookmarked ? 'Remove bookmark' : 'Bookmark',
+              icon: Icon(
+                bookmarked ? Icons.bookmark : Icons.bookmark_border,
+              ),
+              onPressed: () {
+                /// Build a lightweight summary from the loaded detail.
+                final summary = PokemonSummary(
+                  id: detail.id,
+                  name: detail.name,
+                  spriteUrl: detail.spriteUrl,
+                );
+                ref.read(bookmarkNotifierProvider.notifier).toggle(summary);
+              },
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        ],
       ),
       body: detailAsync.when(
         /// Loading state — centred spinner.

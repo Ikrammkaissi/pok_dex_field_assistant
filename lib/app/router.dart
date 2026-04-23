@@ -1,6 +1,7 @@
 /// Declarative route table for the app.
 /// All routes are defined here — widgets never reference path strings directly.
 import 'package:go_router/go_router.dart';
+import 'package:pok_dex_field_assistant/features/bookmarks/presentation/screens/bookmarks_screen.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/screens/detail_screen.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/screens/search_screen.dart';
 
@@ -12,6 +13,9 @@ class AppRoutes {
   /// Path pattern for the Pokémon detail screen.
   /// Use [detailFor] to build a concrete path.
   static const String detail = '/pokemon/:name';
+
+  /// Path for the saved/bookmarked Pokémon screen.
+  static const String bookmarks = '/bookmarks';
 
   /// Returns the concrete detail path for [pokemonName].
   static String detailFor(String pokemonName) => '/pokemon/$pokemonName';
@@ -37,6 +41,12 @@ final appRouter = GoRouter(
       builder: (context, state) => DetailScreen(
         pokemonName: state.pathParameters['name']!,
       ),
+    ),
+
+    /// Bookmarks screen — shows saved Pokémon.
+    GoRoute(
+      path: AppRoutes.bookmarks,
+      builder: (context, state) => const BookmarksScreen(),
     ),
   ],
 );
