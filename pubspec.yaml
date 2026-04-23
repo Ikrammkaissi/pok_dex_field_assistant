@@ -49,6 +49,10 @@ dependencies:
   # pretty-printing in debug, and a LogOutput interface for remote sinks.
   logger: ^2.7.0
 
+  # Audio playback for Pokémon cries — plays OGG URLs from PokéAPI.
+  # Chosen over just_audio: simpler API, sufficient for single-clip playback.
+  audioplayers: ^6.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

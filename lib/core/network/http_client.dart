@@ -42,7 +42,7 @@ class PokeApiHttpClient {
 
       /// Treat any 2xx status code as success.
       if (response.statusCode >= 200 && response.statusCode < 300) {
-       AppLogger.debug(_tag, '${response.statusCode} OK — $path');
+      
         return _decodeBody(response.body, path);
       }
 
