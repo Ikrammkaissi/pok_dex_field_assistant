@@ -878,13 +878,12 @@ class _StatBar extends StatelessWidget {
     /// Maximum base stat across all Pokémon is 255 (Blissey HP).
     const maxStat = 255.0;
 
-    /// Bar colour transitions from red (low) → orange → green (high).
+    /// Bar colour transitions low → mid → high using theme-aware colours.
+    /// [ColorScheme.error] for low stats, harmonised orange/green for mid/high
+    /// so bars respect the active theme seed rather than hard-coded hues.
     final ratio = value / maxStat;
-    final barColor = ratio < 0.33
-        ? Colors.red
-        : ratio < 0.66
-            ? Colors.orange
-            : Colors.green;
+    final scheme = Theme.of(context).colorScheme;
+    final barColor = _statColor(ratio, scheme);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -931,6 +930,17 @@ class _StatBar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Maps a 0–1 stat ratio to a theme-aware colour using [ColorScheme] only.
+  /// No hardcoded hues — all three tones are derived from the active seed:
+  ///   low  → [ColorScheme.error]     (semantic red, seed-adaptive)
+  ///   mid  → [ColorScheme.tertiary]  (seed-generated warning tone)
+  ///   high → [ColorScheme.secondary] (seed-generated positive tone)
+  Color _statColor(double ratio, ColorScheme scheme) {
+    if (ratio < 0.33) return scheme.error;
+    if (ratio < 0.66) return scheme.tertiary;
+    return scheme.secondary;
   }
 }
 
