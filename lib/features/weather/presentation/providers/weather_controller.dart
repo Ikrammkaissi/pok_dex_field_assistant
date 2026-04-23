@@ -43,6 +43,7 @@ class WeatherController extends StateNotifier<WeatherState> {
   /// Fetches current weather then retrieves Pokémon matching the suggested type.
   ///
   /// [lat] and [lon] set specific coordinates (e.g. from the text fields).
+  /// [rawLat] and [rawLon] allow controller-owned parsing/validation for UI input.
   /// [randomise] generates fresh random coordinates, ignoring [lat]/[lon].
   /// When all are omitted, existing [state] coordinates are reused (retry).
   ///
@@ -55,8 +56,32 @@ class WeatherController extends StateNotifier<WeatherState> {
   Future<void> fetchWeatherSuggestions({
     double? lat,
     double? lon,
+    String? rawLat,
+    String? rawLon,
     bool randomise = false,
   }) async {
+    final hasRawCoordinates = rawLat != null || rawLon != null;
+    if (!randomise && hasRawCoordinates) {
+      final parsedLat = double.tryParse((rawLat ?? '').trim());
+      final parsedLon = double.tryParse((rawLon ?? '').trim());
+
+      if (parsedLat == null || parsedLon == null) {
+        state = state.copyWith(error: 'Enter valid numbers for lat and lon.');
+        return;
+      }
+      if (parsedLat < -90 || parsedLat > 90) {
+        state = state.copyWith(error: 'Latitude must be between -90 and 90.');
+        return;
+      }
+      if (parsedLon < -180 || parsedLon > 180) {
+        state = state.copyWith(error: 'Longitude must be between -180 and 180.');
+        return;
+      }
+
+      lat = parsedLat;
+      lon = parsedLon;
+    }
+
     /// Randomise flag wins — generate fresh coords regardless of other args.
     final useLat = randomise ? _randomLat() : (lat ?? state.lat);
     final useLon = randomise ? _randomLon() : (lon ?? state.lon);

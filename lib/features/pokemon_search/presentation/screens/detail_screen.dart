@@ -113,7 +113,7 @@ class _DetailBody extends StatefulWidget {
   final PokemonDetail detail;
 
   /// Creates a [_DetailBody] for [detail].
-  const _DetailBody({required this.detail});
+  const _DetailBody({super.key, required this.detail});
 
   @override
   State<_DetailBody> createState() => _DetailBodyState();
@@ -208,6 +208,7 @@ class _HeroImage extends StatelessWidget {
 
   /// Creates a [_HeroImage] with shiny toggle support.
   const _HeroImage({
+    super.key,
     required this.url,
     required this.isShiny,
     required this.onToggleShiny,
@@ -270,7 +271,7 @@ class _Header extends StatelessWidget {
   final String name;
 
   /// Creates a [_Header] for Pokémon [id] and [name].
-  const _Header({required this.id, required this.name});
+  const _Header({super.key, required this.id, required this.name});
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +307,7 @@ class _TypeChips extends StatelessWidget {
   final List<String> types;
 
   /// Creates [_TypeChips] for [types].
-  const _TypeChips({required this.types});
+  const _TypeChips({super.key, required this.types});
 
   @override
   Widget build(BuildContext context) {
@@ -352,6 +353,7 @@ class _PhysicalStats extends StatelessWidget {
 
   /// Creates [_PhysicalStats] from raw PokéAPI values.
   const _PhysicalStats({
+    super.key,
     required this.height,
     required this.weight,
     required this.baseExperience,
@@ -413,6 +415,7 @@ class _StatItem extends StatelessWidget {
 
   /// Creates a [_StatItem] with [label], [value], and [icon].
   const _StatItem({
+    super.key,
     required this.label,
     required this.value,
     required this.icon,
@@ -449,7 +452,11 @@ class _CriesCard extends StatefulWidget {
   final String legacyUrl;
 
   /// Creates [_CriesCard] for the given cry URLs.
-  const _CriesCard({required this.latestUrl, required this.legacyUrl});
+  const _CriesCard({
+    super.key,
+    required this.latestUrl,
+    required this.legacyUrl,
+  });
 
   @override
   State<_CriesCard> createState() => _CriesCardState();
@@ -560,6 +567,7 @@ class _CryButton extends StatelessWidget {
 
   /// Creates a [_CryButton].
   const _CryButton({
+    super.key,
     required this.label,
     required this.isPlaying,
     required this.onTap,
@@ -607,6 +615,7 @@ class _SpriteGallery extends StatelessWidget {
 
   /// Creates [_SpriteGallery] from four sprite URLs.
   const _SpriteGallery({
+    super.key,
     required this.frontDefault,
     required this.backDefault,
     required this.frontShiny,
@@ -688,11 +697,11 @@ class _SpriteGallery extends StatelessWidget {
 
 /// Card listing all abilities, flagging hidden ones.
 class _AbilitiesCard extends StatelessWidget {
-  /// Ability names in slot order (hidden last, if any).
-  final List<String> abilities;
+  /// Ability entries in slot order with hidden flag from API.
+  final List<({String name, bool isHidden})> abilities;
 
   /// Creates [_AbilitiesCard] for [abilities].
-  const _AbilitiesCard({required this.abilities});
+  const _AbilitiesCard({super.key, required this.abilities});
 
   @override
   Widget build(BuildContext context) {
@@ -707,13 +716,9 @@ class _AbilitiesCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     )),
             const SizedBox(height: 8),
-            /// Each ability on its own row; last entry may be hidden ability.
-            ...abilities.asMap().entries.map((e) {
-              /// PokéAPI puts hidden abilities at the last slot (slot 3).
-              /// We flag the last item if count > 1 as potentially hidden.
-              final isHidden =
-                  abilities.length > 1 && e.key == abilities.length - 1;
-              final display = e.value
+            /// Each ability on its own row; hidden marker uses API field.
+            ...abilities.map((ability) {
+              final display = ability.name
                   .split('-')
                   .map((w) =>
                       w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
@@ -727,7 +732,7 @@ class _AbilitiesCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(display,
                         style: Theme.of(context).textTheme.bodyMedium),
-                    if (isHidden) ...[
+                    if (ability.isHidden) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -761,7 +766,7 @@ class _GameIndicesCard extends StatelessWidget {
   final List<String> gameIndices;
 
   /// Creates [_GameIndicesCard] for [gameIndices].
-  const _GameIndicesCard({required this.gameIndices});
+  const _GameIndicesCard({super.key, required this.gameIndices});
 
   /// Converts hyphenated version name to title-cased display name.
   String _display(String name) => name
@@ -838,7 +843,7 @@ class _BaseStatsCard extends StatelessWidget {
   final Map<String, int> stats;
 
   /// Creates [_BaseStatsCard] for [stats].
-  const _BaseStatsCard({required this.stats});
+  const _BaseStatsCard({super.key, required this.stats});
 
   @override
   Widget build(BuildContext context) {
@@ -884,7 +889,7 @@ class _StatBar extends StatelessWidget {
   final int value;
 
   /// Creates a [_StatBar] for [label] with [value].
-  const _StatBar({required this.label, required this.value});
+  const _StatBar({super.key, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -965,7 +970,7 @@ class _MovesCard extends StatelessWidget {
   final List<MoveEntry> moves;
 
   /// Creates [_MovesCard] for [moves].
-  const _MovesCard({required this.moves});
+  const _MovesCard({super.key, required this.moves});
 
   /// Converts hyphenated API name to title-cased display name.
   String _display(String name) => name

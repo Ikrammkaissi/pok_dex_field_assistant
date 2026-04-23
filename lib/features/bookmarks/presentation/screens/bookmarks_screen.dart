@@ -5,6 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
 
+/// Stable widget keys for [BookmarksScreen] — used in widget tests.
+class BookmarkScreenKeys {
+  static const list = Key('bookmark_list');
+  static const emptyState = Key('bookmark_empty_state');
+}
+
 /// Screen that lists bookmarked Pokémon.
 /// Reads [bookmarkNotifierProvider] — rebuilds when the list changes.
 class BookmarksScreen extends ConsumerWidget {
@@ -26,6 +32,7 @@ class BookmarksScreen extends ConsumerWidget {
       body: bookmarks.isEmpty
           ? const _EmptyState()
           : ListView.builder(
+              key: BookmarkScreenKeys.list,
               padding: const EdgeInsets.only(bottom: 16),
               itemCount: bookmarks.length,
               /// Reuses PokemonListTile — same look as the search screen.
@@ -39,11 +46,12 @@ class BookmarksScreen extends ConsumerWidget {
 /// Shown when no Pokémon have been bookmarked yet.
 class _EmptyState extends StatelessWidget {
   /// Creates an [_EmptyState].
-  const _EmptyState();
+  const _EmptyState({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Center(
+      key: BookmarkScreenKeys.emptyState,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

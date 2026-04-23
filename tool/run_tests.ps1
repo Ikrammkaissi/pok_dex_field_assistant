@@ -35,6 +35,14 @@ $consoleLogPath = Join-Path $reportDir "flutter_test_console.log"
 $coveragePath = "coverage\lcov.info"
 $coverageCopyPath = Join-Path $reportDir "lcov.info"
 $htmlCoverageDir = Join-Path $reportDir "coverage_html"
+$prioritySuiteTests = @(
+  "test/features/bookmarks/data/bookmark_repository_impl_test.dart"
+  "test/features/bookmarks/presentation/providers/bookmark_notifier_test.dart"
+  "test/features/weather/data/repositories/weather_repository_impl_test.dart"
+  "test/features/weather/presentation/providers/weather_controller_test.dart"
+  "test/features/weather/presentation/screens/weather_pokemon_screen_test.dart"
+  "test/features/pokemon_search/data/models/pokemon_detail_model_test.dart"
+)
 
 Push-Location $ProjectRoot
 try {
@@ -42,6 +50,10 @@ try {
 
   if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
     throw "Flutter is not available on PATH."
+  }
+
+  Invoke-Step -Name "Run priority regression suite (P8-P12)" -Action {
+    & flutter test @prioritySuiteTests 1>> $consoleLogPath 2>&1
   }
 
   Invoke-Step -Name "Run tests with machine output" -Action {

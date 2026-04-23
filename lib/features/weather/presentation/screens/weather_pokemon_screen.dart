@@ -107,39 +107,16 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
     }
   }
 
-  /// Parses the text fields and triggers a fetch with the new coordinates.
-  /// Shows a SnackBar if either value is not a valid number.
-  void _applyCoordinates(BuildContext context) {
-    final lat = double.tryParse(_latController.text.trim());
-    final lon = double.tryParse(_lonController.text.trim());
-
-    /// Validate both fields before fetching.
-    if (lat == null || lon == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter valid numbers for lat and lon.')),
-      );
-      return;
-    }
-
-    /// Validate range.
-    if (lat < -90 || lat > 90) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Latitude must be between −90 and 90.')),
-      );
-      return;
-    }
-    if (lon < -180 || lon > 180) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Longitude must be between −180 and 180.')),
-      );
-      return;
-    }
-
-    /// Dismiss keyboard and trigger fetch with the parsed values.
+  /// Triggers coordinate-based fetch using raw text values.
+  void _applyCoordinates() {
+    /// Dismiss keyboard and let the controller validate and parse inputs.
     FocusScope.of(context).unfocus();
     ref
         .read(weatherControllerProvider.notifier)
-        .fetchWeatherSuggestions(lat: lat, lon: lon);
+        .fetchWeatherSuggestions(
+          rawLat: _latController.text,
+          rawLon: _lonController.text,
+        );
   }
 
   @override
@@ -175,7 +152,7 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
             latController: _latController,
             lonController: _lonController,
             isLoading: state.isLoading,
-            onApply: () => _applyCoordinates(context),
+            onApply: _applyCoordinates,
           ),
 
           /// Weather info + Pokémon list fills the remaining space.
@@ -211,6 +188,7 @@ class _CoordinateFields extends StatelessWidget {
   final VoidCallback onApply;
 
   const _CoordinateFields({
+    super.key,
     required this.latController,
     required this.lonController,
     required this.isLoading,
@@ -227,6 +205,7 @@ class _CoordinateFields extends StatelessWidget {
           Expanded(
             flex: 4,
             child: _CoordTextField(
+              fieldKey: WeatherScreenKeys.latField,
               controller: latController,
               label: 'Latitude',
               onSubmitted: (_) => onApply(),
@@ -238,6 +217,7 @@ class _CoordinateFields extends StatelessWidget {
           Expanded(
             flex: 4,
             child: _CoordTextField(
+              fieldKey: WeatherScreenKeys.lonField,
               controller: lonController,
               label: 'Longitude',
               onSubmitted: (_) => onApply(),
@@ -262,6 +242,9 @@ class _CoordinateFields extends StatelessWidget {
 
 /// Single coordinate text field for numeric lat or lon input.
 class _CoordTextField extends StatelessWidget {
+  /// Stable key for this specific coordinate input field.
+  final Key fieldKey;
+
   /// Controller shared with the parent so values can be read on apply.
   final TextEditingController controller;
 
@@ -272,6 +255,8 @@ class _CoordTextField extends StatelessWidget {
   final ValueChanged<String> onSubmitted;
 
   const _CoordTextField({
+    super.key,
+    required this.fieldKey,
     required this.controller,
     required this.label,
     required this.onSubmitted,
@@ -279,13 +264,8 @@ class _CoordTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    /// Key is derived from the label so lat and lon fields are uniquely addressable.
-    final key = label == 'Latitude'
-        ? WeatherScreenKeys.latField
-        : WeatherScreenKeys.lonField;
-
     return TextField(
-      key: key,
+      key: fieldKey,
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(
         signed: true,
@@ -316,6 +296,7 @@ class _WeatherContent extends StatelessWidget {
   final VoidCallback onRetry;
 
   const _WeatherContent({
+    super.key,
     required this.state,
     required this.scrollController,
     required this.onRetry,

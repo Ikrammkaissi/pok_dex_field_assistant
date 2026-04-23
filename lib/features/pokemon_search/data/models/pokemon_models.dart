@@ -177,8 +177,8 @@ class PokemonDetail {
   /// Weight in hectograms as returned by PokéAPI.
   final int weight;
 
-  /// Ability names in slot order (non-hidden first, hidden last).
-  final List<String> abilities;
+  /// Ability entries in slot order with `isHidden` truth from PokéAPI.
+  final List<({String name, bool isHidden})> abilities;
 
   /// Base stat values keyed by stat name (e.g. {'hp': 78, 'attack': 84}).
   final Map<String, int> stats;
@@ -244,10 +244,16 @@ class PokemonDetail {
           .map((t) => (t as Map<String, dynamic>)['type']['name'] as String)
           .toList();
 
-      /// Map each abilities entry to its ability name string.
+      /// Map each abilities entry to ability name and hidden flag.
       final abilitiesRaw = json['abilities'] as List<dynamic>;
       final abilities = abilitiesRaw
-          .map((a) => (a as Map<String, dynamic>)['ability']['name'] as String)
+          .map((a) {
+            final map = a as Map<String, dynamic>;
+            return (
+              name: (map['ability'] as Map<String, dynamic>)['name'] as String,
+              isHidden: map['is_hidden'] as bool? ?? false,
+            );
+          })
           .toList();
 
       /// Build stat map: stat-name → base_stat integer value.

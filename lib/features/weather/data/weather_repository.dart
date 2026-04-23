@@ -82,7 +82,7 @@ class WeatherRepositoryImpl implements WeatherRepository {
 
       /// Build summaries for all entries without extra calls.
       final summaries = pokemonList
-          .map((entry) {
+          .map<PokemonSummary?>((entry) {
             /// Each entry wraps the pokemon under a `pokemon` key.
             final data =
                 (entry as Map<String, dynamic>)['pokemon'] as Map<String, dynamic>;
@@ -96,7 +96,14 @@ class WeatherRepositoryImpl implements WeatherRepository {
             /// Split on `/`, drop empties, take the last segment as the id string.
             final idStr =
                 url.split('/').where((s) => s.isNotEmpty).last;
-            final id = int.parse(idStr);
+            final id = int.tryParse(idStr);
+            if (id == null) {
+              AppLogger.warning(
+                _tag,
+                'Skipping entry with non-numeric pokemon ID: $idStr',
+              );
+              return null;
+            }
 
             /// Construct sprite URL from the known GitHub raw sprites path.
             final spriteUrl = '$_spriteBase/$id.png';
@@ -108,6 +115,7 @@ class WeatherRepositoryImpl implements WeatherRepository {
               primaryType: typeName,
             );
           })
+          .whereType<PokemonSummary>()
           .toList();
 
       AppLogger.info(_tag,

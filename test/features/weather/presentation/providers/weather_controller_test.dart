@@ -58,6 +58,9 @@ class _FakeWeatherRepository implements WeatherRepository {
   /// Records every lat value passed to [getCurrentWeather].
   final List<double> latHistory = [];
 
+  /// Records every lon value passed to [getCurrentWeather].
+  final List<double> lonHistory = [];
+
   _FakeWeatherRepository({
     WeatherData? weatherResult,
     List<PokemonSummary>? pokemonResult,
@@ -72,6 +75,7 @@ class _FakeWeatherRepository implements WeatherRepository {
     required double lon,
   }) async {
     latHistory.add(lat);
+    lonHistory.add(lon);
     if (weatherError != null) throw weatherError!;
     return weatherResult;
   }
@@ -402,6 +406,76 @@ void main() {
       final state = container.read(weatherControllerProvider);
       expect(state.lat, 51.5);
       expect(state.lon, -0.1);
+    });
+
+    test('raw coordinates parse and fetch successfully', () async {
+      final repo = _FakeWeatherRepository();
+      final container = _makeContainer(repo);
+      addTearDown(container.dispose);
+
+      await container
+          .read(weatherControllerProvider.notifier)
+          .fetchWeatherSuggestions(rawLat: '36.8', rawLon: '10.1');
+
+      final state = container.read(weatherControllerProvider);
+      expect(state.error, isNull);
+      expect(state.lat, 36.8);
+      expect(state.lon, 10.1);
+      expect(repo.latHistory.last, 36.8);
+      expect(repo.lonHistory.last, 10.1);
+    });
+
+    test('raw invalid numbers set validation error and skip fetch', () async {
+      final repo = _FakeWeatherRepository();
+      final container = _makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final controller = container.read(weatherControllerProvider.notifier);
+      await controller.fetchWeatherSuggestions();
+      repo.latHistory.clear();
+
+      final beforeCalls = repo.latHistory.length;
+      await controller.fetchWeatherSuggestions(rawLat: 'abc', rawLon: '10.1');
+
+      final state = container.read(weatherControllerProvider);
+      expect(state.error, 'Enter valid numbers for lat and lon.');
+      expect(repo.latHistory.length, beforeCalls);
+    });
+
+    test('raw out-of-range latitude sets validation error and skips fetch',
+        () async {
+      final repo = _FakeWeatherRepository();
+      final container = _makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final controller = container.read(weatherControllerProvider.notifier);
+      await controller.fetchWeatherSuggestions();
+      repo.latHistory.clear();
+
+      final beforeCalls = repo.latHistory.length;
+      await controller.fetchWeatherSuggestions(rawLat: '120', rawLon: '10.1');
+
+      final state = container.read(weatherControllerProvider);
+      expect(state.error, 'Latitude must be between -90 and 90.');
+      expect(repo.latHistory.length, beforeCalls);
+    });
+
+    test('raw out-of-range longitude sets validation error and skips fetch',
+        () async {
+      final repo = _FakeWeatherRepository();
+      final container = _makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final controller = container.read(weatherControllerProvider.notifier);
+      await controller.fetchWeatherSuggestions();
+      repo.latHistory.clear();
+
+      final beforeCalls = repo.latHistory.length;
+      await controller.fetchWeatherSuggestions(rawLat: '36.8', rawLon: '190');
+
+      final state = container.read(weatherControllerProvider);
+      expect(state.error, 'Longitude must be between -180 and 180.');
+      expect(repo.latHistory.length, beforeCalls);
     });
   });
 }

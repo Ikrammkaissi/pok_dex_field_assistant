@@ -380,7 +380,7 @@ void main() {
       expect(double.tryParse(text), isNotNull);
     });
 
-    testWidgets('invalid lat text shows SnackBar', (tester) async {
+    testWidgets('invalid lat text shows controller error view', (tester) async {
       final repo = _FakeWeatherRepository();
 
       await tester.pumpWidget(_wrap(const WeatherPokemonScreen(), repo, prefs));
@@ -389,12 +389,13 @@ void main() {
       /// Type non-numeric text into the lat field.
       await tester.enterText(find.byKey(WeatherScreenKeys.latField), 'abc');
       await tester.tap(find.byKey(WeatherScreenKeys.goButton));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byKey(WeatherScreenKeys.errorView), findsOneWidget);
+      expect(find.text('Enter valid numbers for lat and lon.'), findsOneWidget);
     });
 
-    testWidgets('out-of-range lat shows SnackBar', (tester) async {
+    testWidgets('out-of-range lat shows controller error view', (tester) async {
       final repo = _FakeWeatherRepository();
 
       await tester.pumpWidget(_wrap(const WeatherPokemonScreen(), repo, prefs));
@@ -402,12 +403,13 @@ void main() {
 
       await tester.enterText(find.byKey(WeatherScreenKeys.latField), '999');
       await tester.tap(find.byKey(WeatherScreenKeys.goButton));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byKey(WeatherScreenKeys.errorView), findsOneWidget);
+      expect(find.text('Latitude must be between -90 and 90.'), findsOneWidget);
     });
 
-    testWidgets('out-of-range lon shows SnackBar', (tester) async {
+    testWidgets('out-of-range lon shows controller error view', (tester) async {
       final repo = _FakeWeatherRepository();
 
       await tester.pumpWidget(_wrap(const WeatherPokemonScreen(), repo, prefs));
@@ -415,9 +417,10 @@ void main() {
 
       await tester.enterText(find.byKey(WeatherScreenKeys.lonField), '999');
       await tester.tap(find.byKey(WeatherScreenKeys.goButton));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byKey(WeatherScreenKeys.errorView), findsOneWidget);
+      expect(find.text('Longitude must be between -180 and 180.'), findsOneWidget);
     });
 
     testWidgets('valid coords — Go button triggers fetch and shows results',

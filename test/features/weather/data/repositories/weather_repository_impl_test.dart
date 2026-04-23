@@ -58,6 +58,28 @@ const _emptyTypeJson = <String, dynamic>{
   'pokemon': <dynamic>[],
 };
 
+/// Type response containing one malformed pokemon URL id and one valid entry.
+const _mixedTypeJson = <String, dynamic>{
+  'name': 'fire',
+  'id': 10,
+  'pokemon': [
+    {
+      'pokemon': {
+        'name': 'bad-entry',
+        'url': 'https://pokeapi.co/api/v2/pokemon/not-a-number/',
+      },
+      'slot': 1,
+    },
+    {
+      'pokemon': {
+        'name': 'charmeleon',
+        'url': 'https://pokeapi.co/api/v2/pokemon/5/',
+      },
+      'slot': 1,
+    },
+  ],
+};
+
 // ---------------------------------------------------------------------------
 // Fake HTTP clients
 // ---------------------------------------------------------------------------
@@ -286,6 +308,19 @@ void main() {
       final pokemon = await repo.getPokemonByType('stellar');
 
       expect(pokemon, isEmpty);
+    });
+
+    test('skips entries with non-numeric pokemon IDs', () async {
+      final repo = _makeRepo(
+        weatherClient: _FakeWeatherClient(body: _weatherJson),
+        pokeClient: _FakePokeClient(_mixedTypeJson),
+      );
+
+      final pokemon = await repo.getPokemonByType('fire');
+
+      expect(pokemon.length, 1);
+      expect(pokemon.first.name, 'charmeleon');
+      expect(pokemon.first.id, 5);
     });
 
     test('throws NetworkException on connectivity failure', () async {

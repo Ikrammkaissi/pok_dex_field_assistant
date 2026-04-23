@@ -52,8 +52,8 @@ final _validJson = <String, dynamic>{
     {'type': {'name': 'flying'}},
   ],
   'abilities': [
-    {'ability': {'name': 'blaze'}},
-    {'ability': {'name': 'solar-power'}},
+    {'ability': {'name': 'blaze'}, 'is_hidden': false},
+    {'ability': {'name': 'solar-power'}, 'is_hidden': true},
   ],
   'stats': [
     {'stat': {'name': 'hp'}, 'base_stat': 78},
@@ -205,9 +205,10 @@ void main() {
       expect(PokemonDetail.fromJson(json).types, ['psychic']);
     });
 
-    test('parses abilities in slot order', () {
+    test('parses abilities in slot order with hidden flags', () {
       final model = PokemonDetail.fromJson(_validJson);
-      expect(model.abilities, ['blaze', 'solar-power']);
+      expect(model.abilities.map((a) => a.name), ['blaze', 'solar-power']);
+      expect(model.abilities.map((a) => a.isHidden), [false, true]);
     });
 
     test('parses stats map', () {
