@@ -275,7 +275,10 @@ class _Content extends StatelessWidget {
           );
         }
 
-        return PokemonListTile(item: state.items[itemIndex]);
+        /// RepaintBoundary isolates per-tile repaints from scroll-driven invalidations.
+        return RepaintBoundary(
+          child: PokemonListTile(item: state.items[itemIndex]),
+        );
       },
     );
   }

@@ -305,20 +305,19 @@ class _TypeChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    /// Computed once per build — shared across all type chips in this row.
+    final labelStyle = TextStyle(
+      color: scheme.onSecondaryContainer,
+      fontWeight: FontWeight.bold,
+      fontSize: 12,
+    );
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: types.map((t) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Chip(
-            label: Text(
-              t.toUpperCase(),
-              style: TextStyle(
-                color: scheme.onSecondaryContainer,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
+            label: Text(t.toUpperCase(), style: labelStyle),
             backgroundColor: scheme.secondaryContainer,
             /// Remove default padding to keep chips compact.
             padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -954,7 +953,7 @@ const _methodOrder = ['level-up', 'machine', 'egg', 'tutor'];
 
 /// Card showing all learnable moves grouped by learn method.
 /// Within each group: level-up sorted by level, rest alphabetical.
-class _MovesCard extends StatelessWidget {
+class _MovesCard extends StatefulWidget {
   /// All learnable moves with method and level data.
   final List<MoveEntry> moves;
 
@@ -962,16 +961,37 @@ class _MovesCard extends StatelessWidget {
   const _MovesCard({super.key, required this.moves});
 
   @override
-  Widget build(BuildContext context) {
-    if (moves.isEmpty) return const SizedBox.shrink();
+  State<_MovesCard> createState() => _MovesCardState();
+}
 
-    /// Group moves by learn method.
+class _MovesCardState extends State<_MovesCard> {
+  /// Grouped and sorted moves — computed once per unique [moves] list.
+  late Map<String, List<MoveEntry>> _groups;
+
+  /// Ordered group keys — known methods first, unknowns appended.
+  late List<String> _orderedKeys;
+
+  @override
+  void initState() {
+    super.initState();
+    _computeGroups(widget.moves);
+  }
+
+  @override
+  void didUpdateWidget(_MovesCard old) {
+    super.didUpdateWidget(old);
+    /// Re-compute only when the moves list reference changes (new detail load).
+    if (!identical(old.moves, widget.moves)) {
+      _computeGroups(widget.moves);
+    }
+  }
+
+  /// Groups and sorts [moves] once; result stored in [_groups] and [_orderedKeys].
+  void _computeGroups(List<MoveEntry> moves) {
     final groups = <String, List<MoveEntry>>{};
     for (final m in moves) {
       (groups[m.learnMethod] ??= []).add(m);
     }
-
-    /// Sort each group: level-up by level asc, others alphabetically.
     for (final entry in groups.entries) {
       if (entry.key == 'level-up') {
         entry.value.sort((a, b) => a.levelLearnedAt.compareTo(b.levelLearnedAt));
@@ -979,12 +999,19 @@ class _MovesCard extends StatelessWidget {
         entry.value.sort((a, b) => a.name.compareTo(b.name));
       }
     }
-
-    /// Render known methods first in priority order, unknowns after.
-    final orderedKeys = [
+    _groups = groups;
+    _orderedKeys = [
       ..._methodOrder.where(groups.containsKey),
       ...groups.keys.where((k) => !_methodOrder.contains(k)),
     ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.moves.isEmpty) return const SizedBox.shrink();
+
+    final groups = _groups;
+    final orderedKeys = _orderedKeys;
 
     final scheme = Theme.of(context).colorScheme;
     final labelStyle = Theme.of(context)
@@ -1018,7 +1045,7 @@ class _MovesCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${moves.length}',
+                    '${widget.moves.length}',
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
                 ),

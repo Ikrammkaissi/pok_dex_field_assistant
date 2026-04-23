@@ -29,9 +29,18 @@ final bookmarkNotifierProvider =
   return BookmarkNotifier(ref.watch(bookmarkRepositoryProvider));
 });
 
+/// Derived Set of bookmarked Pokémon names — O(1) containment check.
+/// Recomputed only when the bookmark list changes; shared across all callers.
+final bookmarkedNamesProvider = Provider<Set<String>>((ref) {
+  return ref
+      .watch(bookmarkNotifierProvider)
+      .map((p) => p.name)
+      .toSet();
+});
+
 /// Derived provider — true if the named Pokémon is currently bookmarked.
-/// Rebuilds only when the bookmark list changes, keeping callers efficient.
+/// Uses [bookmarkedNamesProvider] for O(1) lookup instead of O(n) linear scan.
+/// Each family instance rebuilds only when its own bool value changes.
 final isBookmarkedProvider = Provider.family<bool, String>((ref, pokemonName) {
-  final bookmarks = ref.watch(bookmarkNotifierProvider);
-  return bookmarks.any((p) => p.name == pokemonName);
+  return ref.watch(bookmarkedNamesProvider).contains(pokemonName);
 });
