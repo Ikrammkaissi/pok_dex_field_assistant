@@ -56,6 +56,9 @@ dependencies:
   # Key-value local storage for persisting bookmarks across sessions.
   shared_preferences: ^2.3.3
 
+  # Disk + memory cache for network images — avoids re-fetching sprites on scroll.
+  cached_network_image: ^3.4.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,5 +1,6 @@
 /// A single row in the Pokémon search/bookmarks list.
 /// Shows the sprite thumbnail, name, dex number, and a bookmark toggle icon.
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,14 +33,14 @@ class PokemonListTile extends ConsumerWidget {
         leading: SizedBox(
           width: 56,
           height: 56,
-          child: Image.network(
-            item.spriteUrl,
+          child: CachedNetworkImage(
+            imageUrl: item.spriteUrl,
             fit: BoxFit.contain,
             /// Show a pokéball placeholder while the image loads.
-            loadingBuilder: (context, child, progress) =>
-                progress == null ? child : const Icon(Icons.catching_pokemon),
+            placeholder: (context, url) =>
+                const Icon(Icons.catching_pokemon),
             /// Show a broken-image icon if the URL is empty or fails.
-            errorBuilder: (context, error, stack) =>
+            errorWidget: (context, url, error) =>
                 const Icon(Icons.broken_image_outlined),
           ),
         ),

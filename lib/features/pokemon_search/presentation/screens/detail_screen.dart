@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/core/utils/display_name.dart';
@@ -220,15 +221,14 @@ class _HeroImage extends StatelessWidget {
             /// Fixed size — prominent but fits small phones.
             width: 220,
             height: 220,
-            child: Image.network(
-              url,
+            child: CachedNetworkImage(
+              imageUrl: url,
               fit: BoxFit.contain,
               /// Spinner while downloading.
-              loadingBuilder: (ctx, child, progress) => progress == null
-                  ? child
-                  : const Center(child: CircularProgressIndicator()),
+              placeholder: (ctx, _) =>
+                  const Center(child: CircularProgressIndicator()),
               /// Pokéball icon if URL is empty or fails.
-              errorBuilder: (ctx, _, __) =>
+              errorWidget: (ctx, _, __) =>
                   const Center(child: Icon(Icons.catching_pokemon, size: 80)),
             ),
           ),
@@ -651,21 +651,18 @@ class _SpriteGallery extends StatelessWidget {
                         SizedBox(
                           width: 80,
                           height: 80,
-                          child: Image.network(
-                            s.$2,
+                          child: CachedNetworkImage(
+                            imageUrl: s.$2,
                             fit: BoxFit.contain,
-                            loadingBuilder: (ctx, child, progress) =>
-                                progress == null
-                                    ? child
-                                    : const Center(
-                                        child: SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        ),
-                                      ),
-                            errorBuilder: (ctx, _, __) => const Icon(
+                            placeholder: (ctx, _) => const Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2),
+                              ),
+                            ),
+                            errorWidget: (ctx, _, __) => const Icon(
                                 Icons.broken_image_outlined,
                                 size: 40),
                           ),

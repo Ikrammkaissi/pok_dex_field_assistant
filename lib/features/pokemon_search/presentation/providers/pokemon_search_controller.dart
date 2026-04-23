@@ -15,7 +15,7 @@ const _initialPageSize = 100;
 const _pageSize = 30;
 
 /// Maximum raw items kept in the window during browse mode.
-const _maxWindow = 300;
+const _maxWindow = 150;
 
 /// Minimum filtered results before auto-fetch stops trying to find more.
 const _minSearchResults = 20;
