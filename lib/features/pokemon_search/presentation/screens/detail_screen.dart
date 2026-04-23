@@ -6,28 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 
-/// Type chip colors — best-effort approximation of official Pokémon type palette.
-const _typeColors = <String, Color>{
-  'normal': Color(0xFFA8A878),
-  'fire': Color(0xFFF08030),
-  'water': Color(0xFF6890F0),
-  'electric': Color(0xFFF8D030),
-  'grass': Color(0xFF78C850),
-  'ice': Color(0xFF98D8D8),
-  'fighting': Color(0xFFC03028),
-  'poison': Color(0xFFA040A0),
-  'ground': Color(0xFFE0C068),
-  'flying': Color(0xFFA890F0),
-  'psychic': Color(0xFFF85888),
-  'bug': Color(0xFFA8B820),
-  'rock': Color(0xFFB8A038),
-  'ghost': Color(0xFF705898),
-  'dragon': Color(0xFF7038F8),
-  'dark': Color(0xFF705848),
-  'steel': Color(0xFFB8B8D0),
-  'fairy': Color(0xFFEE99AC),
-};
-
 /// Stat display labels — prettier than the raw API stat names.
 const _statLabels = <String, String>{
   'hp': 'HP',
@@ -55,6 +33,7 @@ class DetailScreen extends ConsumerWidget {
     return Scaffold(
       /// AppBar title shows while loading and on error.
       appBar: AppBar(
+        leading: const BackButton(),
         title: detailAsync.maybeWhen(
           data: (d) => Text(_displayName(d.name)),
           orElse: () => Text(_displayName(pokemonName)),
@@ -98,7 +77,8 @@ class DetailScreen extends ConsumerWidget {
 }
 
 /// Scrollable body rendered once [PokemonDetail] is available.
-class _DetailBody extends StatelessWidget {
+/// Stateful to track the shiny sprite toggle.
+class _DetailBody extends StatefulWidget {
   /// Full Pokémon data to render.
   final PokemonDetail detail;
 
@@ -106,14 +86,29 @@ class _DetailBody extends StatelessWidget {
   const _DetailBody({required this.detail});
 
   @override
+  State<_DetailBody> createState() => _DetailBodyState();
+}
+
+class _DetailBodyState extends State<_DetailBody> {
+  /// Whether the shiny artwork variant is currently shown.
+  bool _showShiny = false;
+
+  @override
   Widget build(BuildContext context) {
+    final detail = widget.detail;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          /// Large official artwork image with loading and error fallbacks.
-          _HeroImage(url: detail.officialArtworkUrl),
+          /// Hero image with shiny toggle button overlaid.
+          _HeroImage(
+            url: _showShiny
+                ? detail.officialArtworkShinyUrl
+                : detail.officialArtworkUrl,
+            isShiny: _showShiny,
+            onToggleShiny: () => setState(() => _showShiny = !_showShiny),
+          ),
           const SizedBox(height: 16),
 
           /// Dex number and name header.
@@ -124,8 +119,22 @@ class _DetailBody extends StatelessWidget {
           _TypeChips(types: detail.types),
           const SizedBox(height: 16),
 
-          /// Physical stats: height and weight side-by-side.
-          _PhysicalStats(height: detail.height, weight: detail.weight),
+          /// Physical stats: height, weight, base experience, and move count.
+          _PhysicalStats(
+            height: detail.height,
+            weight: detail.weight,
+            baseExperience: detail.baseExperience,
+            moveCount: detail.moveCount,
+          ),
+          const SizedBox(height: 16),
+
+          /// Sprite gallery — all four small sprite variants.
+          _SpriteGallery(
+            frontDefault: detail.spriteUrl,
+            backDefault: detail.backSpriteUrl,
+            frontShiny: detail.frontShinySpriteUrl,
+            backShiny: detail.backShinySpriteUrl,
+          ),
           const SizedBox(height: 16),
 
           /// Abilities list — hidden ability flagged.
@@ -134,37 +143,77 @@ class _DetailBody extends StatelessWidget {
 
           /// Base stat bars.
           _BaseStatsCard(stats: detail.stats),
+          const SizedBox(height: 16),
+
+          /// Full moves table.
+          _MovesCard(moves: detail.moves),
         ],
       ),
     );
   }
 }
 
-/// Large Pokémon image from official artwork URL.
+/// Large Pokémon image with a shiny toggle button in the corner.
 class _HeroImage extends StatelessWidget {
-  /// Artwork URL to load.
+  /// Artwork URL to load (normal or shiny depending on [isShiny]).
   final String url;
 
-  /// Creates a [_HeroImage] loading [url].
-  const _HeroImage({required this.url});
+  /// Whether the shiny variant is currently shown.
+  final bool isShiny;
+
+  /// Called when the user taps the shiny toggle button.
+  final VoidCallback onToggleShiny;
+
+  /// Creates a [_HeroImage] with shiny toggle support.
+  const _HeroImage({
+    required this.url,
+    required this.isShiny,
+    required this.onToggleShiny,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: SizedBox(
-        /// Fixed size — prominent but fits small phones.
-        width: 220,
-        height: 220,
-        child: Image.network(
-          url,
-          fit: BoxFit.contain,
-          /// Spinner while downloading.
-          loadingBuilder: (ctx, child, progress) =>
-              progress == null ? child : const Center(child: CircularProgressIndicator()),
-          /// Pokéball icon if URL is empty or fails.
-          errorBuilder: (ctx, _, __) =>
-              const Center(child: Icon(Icons.catching_pokemon, size: 80)),
-        ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            /// Fixed size — prominent but fits small phones.
+            width: 220,
+            height: 220,
+            child: Image.network(
+              url,
+              fit: BoxFit.contain,
+              /// Spinner while downloading.
+              loadingBuilder: (ctx, child, progress) => progress == null
+                  ? child
+                  : const Center(child: CircularProgressIndicator()),
+              /// Pokéball icon if URL is empty or fails.
+              errorBuilder: (ctx, _, __) =>
+                  const Center(child: Icon(Icons.catching_pokemon, size: 80)),
+            ),
+          ),
+
+          /// Shiny toggle — bottom-right corner of the image box.
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Tooltip(
+              message: isShiny ? 'Show normal' : 'Show shiny',
+              child: IconButton.filledTonal(
+                icon: const Icon(Icons.auto_awesome),
+                /// Highlighted colour when shiny is active.
+                style: isShiny
+                    ? IconButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primaryContainer,
+                      )
+                    : null,
+                onPressed: onToggleShiny,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -219,23 +268,22 @@ class _TypeChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: types.map((t) {
-        /// Fallback grey for unknown type names.
-        final color = _typeColors[t] ?? Colors.grey;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Chip(
             label: Text(
               t.toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: scheme.onSecondaryContainer,
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
             ),
-            backgroundColor: color,
+            backgroundColor: scheme.secondaryContainer,
             /// Remove default padding to keep chips compact.
             padding: const EdgeInsets.symmetric(horizontal: 6),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -246,7 +294,7 @@ class _TypeChips extends StatelessWidget {
   }
 }
 
-/// Two-column card showing height and weight converted to metric.
+/// Four-column card: height, weight, base experience, and move count.
 class _PhysicalStats extends StatelessWidget {
   /// Height in decimetres (PokéAPI unit — divide by 10 for metres).
   final int height;
@@ -254,14 +302,25 @@ class _PhysicalStats extends StatelessWidget {
   /// Weight in hectograms (PokéAPI unit — divide by 10 for kg).
   final int weight;
 
-  /// Creates [_PhysicalStats] from raw PokéAPI [height] and [weight].
-  const _PhysicalStats({required this.height, required this.weight});
+  /// Base experience awarded when this Pokémon is defeated in battle.
+  final int baseExperience;
+
+  /// Total number of moves this Pokémon can learn.
+  final int moveCount;
+
+  /// Creates [_PhysicalStats] from raw PokéAPI values.
+  const _PhysicalStats({
+    required this.height,
+    required this.weight,
+    required this.baseExperience,
+    required this.moveCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -271,13 +330,26 @@ class _PhysicalStats extends StatelessWidget {
               value: '${(height / 10).toStringAsFixed(1)} m',
               icon: Icons.height,
             ),
-            /// Divider between height and weight.
-            const VerticalDivider(width: 32),
+            const VerticalDivider(width: 1),
             /// Weight in kg with one decimal place.
             _StatItem(
               label: 'Weight',
               value: '${(weight / 10).toStringAsFixed(1)} kg',
               icon: Icons.monitor_weight_outlined,
+            ),
+            const VerticalDivider(width: 1),
+            /// Base XP — experience points gained by defeating this Pokémon.
+            _StatItem(
+              label: 'Base XP',
+              value: '$baseExperience',
+              icon: Icons.star_outline,
+            ),
+            const VerticalDivider(width: 1),
+            /// Move count — total learnable moves.
+            _StatItem(
+              label: 'Moves',
+              value: '$moveCount',
+              icon: Icons.sports_martial_arts_outlined,
             ),
           ],
         ),
@@ -320,6 +392,103 @@ class _StatItem extends StatelessWidget {
               ?.copyWith(color: Theme.of(context).colorScheme.outline),
         ),
       ],
+    );
+  }
+}
+
+/// Horizontal scrollable row of small sprite variants.
+/// Shows front/back in normal and shiny — skips empty URLs.
+class _SpriteGallery extends StatelessWidget {
+  /// Front-default sprite URL.
+  final String frontDefault;
+
+  /// Back-default sprite URL.
+  final String backDefault;
+
+  /// Front-shiny sprite URL.
+  final String frontShiny;
+
+  /// Back-shiny sprite URL.
+  final String backShiny;
+
+  /// Creates [_SpriteGallery] from four sprite URLs.
+  const _SpriteGallery({
+    required this.frontDefault,
+    required this.backDefault,
+    required this.frontShiny,
+    required this.backShiny,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    /// Label–URL pairs; filter out entries with empty URLs.
+    final sprites = <(String, String)>[
+      ('Front', frontDefault),
+      ('Back', backDefault),
+      ('Front ✦', frontShiny),
+      ('Back ✦', backShiny),
+    ].where((s) => s.$2.isNotEmpty).toList();
+
+    if (sprites.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Sprites',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: sprites.map((s) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      children: [
+                        /// Fixed 80×80 box per sprite tile.
+                        SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: Image.network(
+                            s.$2,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (ctx, child, progress) =>
+                                progress == null
+                                    ? child
+                                    : const Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        ),
+                                      ),
+                            errorBuilder: (ctx, _, __) => const Icon(
+                                Icons.broken_image_outlined,
+                                size: 40),
+                          ),
+                        ),
+                        Text(
+                          s.$1,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -503,6 +672,122 @@ class _StatBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Table listing all learnable moves, two per row, sorted alphabetically.
+class _MovesCard extends StatelessWidget {
+  /// All learnable move names in display order.
+  final List<String> moves;
+
+  /// Creates [_MovesCard] for [moves].
+  const _MovesCard({required this.moves});
+
+  /// Converts hyphenated API name to title-cased display name.
+  String _display(String name) => name
+      .split('-')
+      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
+      .join(' ');
+
+  @override
+  Widget build(BuildContext context) {
+    if (moves.isEmpty) return const SizedBox.shrink();
+
+    /// Sort alphabetically for easier scanning.
+    final sorted = [...moves]..sort();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Moves',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 8),
+                /// Move count badge.
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${moves.length}',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            /// Two-column table using DataTable for aligned rows.
+            DataTable(
+              /// Compact column spacing.
+              columnSpacing: 16,
+              headingRowHeight: 32,
+              dataRowMinHeight: 28,
+              dataRowMaxHeight: 36,
+              dividerThickness: 0,
+              columns: const [
+                DataColumn(label: Text('#')),
+                DataColumn(label: Text('Move')),
+                DataColumn(label: Text('#')),
+                DataColumn(label: Text('Move')),
+              ],
+              rows: List.generate(
+                (sorted.length / 2).ceil(),
+                (i) {
+                  /// Left cell — always exists.
+                  final leftIdx = i * 2;
+                  /// Right cell — may not exist for odd-count lists.
+                  final rightIdx = leftIdx + 1;
+                  final hasRight = rightIdx < sorted.length;
+
+                  return DataRow(cells: [
+                    DataCell(Text(
+                      '${leftIdx + 1}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                    )),
+                    DataCell(Text(
+                      _display(sorted[leftIdx]),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    )),
+                    DataCell(hasRight
+                        ? Text(
+                            '${rightIdx + 1}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.outline,
+                                ),
+                          )
+                        : const SizedBox.shrink()),
+                    DataCell(hasRight
+                        ? Text(
+                            _display(sorted[rightIdx]),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          )
+                        : const SizedBox.shrink()),
+                  ]);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

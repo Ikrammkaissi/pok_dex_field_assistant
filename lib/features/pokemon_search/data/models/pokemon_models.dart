@@ -73,8 +73,29 @@ class PokemonDetail {
   /// Front-default sprite URL used as the hero image.
   final String spriteUrl;
 
+  /// Back-facing default sprite URL.
+  final String backSpriteUrl;
+
+  /// Front-facing shiny sprite URL.
+  final String frontShinySpriteUrl;
+
+  /// Back-facing shiny sprite URL.
+  final String backShinySpriteUrl;
+
   /// Official artwork URL — high-resolution image shown on the detail screen.
   final String officialArtworkUrl;
+
+  /// Shiny official artwork URL — shown when the shiny toggle is active.
+  final String officialArtworkShinyUrl;
+
+  /// Base experience awarded when this Pokémon is defeated.
+  final int baseExperience;
+
+  /// Total number of moves this Pokémon can learn.
+  final int moveCount;
+
+  /// All learnable move names in API order.
+  final List<String> moves;
 
   /// All type names in slot order (e.g. ['fire', 'flying']).
   final List<String> types;
@@ -96,7 +117,14 @@ class PokemonDetail {
     required this.id,
     required this.name,
     required this.spriteUrl,
+    required this.backSpriteUrl,
+    required this.frontShinySpriteUrl,
+    required this.backShinySpriteUrl,
     required this.officialArtworkUrl,
+    required this.officialArtworkShinyUrl,
+    required this.baseExperience,
+    required this.moveCount,
+    required this.moves,
     required this.types,
     required this.height,
     required this.weight,
@@ -114,11 +142,18 @@ class PokemonDetail {
       /// Null-safe: some forms have no front_default sprite.
       final spriteUrl = sprites['front_default'] as String? ?? '';
 
+      /// Back-facing and shiny sprite variants — may be null for some forms.
+      final backSpriteUrl = sprites['back_default'] as String? ?? '';
+      final frontShinySpriteUrl = sprites['front_shiny'] as String? ?? '';
+      final backShinySpriteUrl = sprites['back_shiny'] as String? ?? '';
+
       /// Official artwork — higher resolution than front_default sprite.
       final other = sprites['other'] as Map<String, dynamic>? ?? {};
       final artwork = other['official-artwork'] as Map<String, dynamic>? ?? {};
       final officialArtworkUrl =
           artwork['front_default'] as String? ?? spriteUrl;
+      final officialArtworkShinyUrl =
+          artwork['front_shiny'] as String? ?? spriteUrl;
 
       /// Map each types entry to its type name string.
       final typesRaw = json['types'] as List<dynamic>;
@@ -140,11 +175,27 @@ class PokemonDetail {
               s['base_stat'] as int,
       };
 
+      /// Parse learnable moves — extract name from each entry.
+      final movesRaw = json['moves'] as List<dynamic>? ?? [];
+      final moves = movesRaw
+          .map((m) =>
+              (m as Map<String, dynamic>)['move']['name'] as String)
+          .toList();
+      final moveCount = moves.length;
+
       return PokemonDetail(
         id: json['id'] as int,
         name: json['name'] as String,
         spriteUrl: spriteUrl,
+        backSpriteUrl: backSpriteUrl,
+        frontShinySpriteUrl: frontShinySpriteUrl,
+        backShinySpriteUrl: backShinySpriteUrl,
         officialArtworkUrl: officialArtworkUrl,
+        officialArtworkShinyUrl: officialArtworkShinyUrl,
+        /// base_experience may be null for some forms — default to 0.
+        baseExperience: json['base_experience'] as int? ?? 0,
+        moveCount: moveCount,
+        moves: moves,
         types: types,
         /// height and weight are top-level integer fields.
         height: json['height'] as int,
