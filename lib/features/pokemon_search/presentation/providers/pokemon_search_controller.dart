@@ -225,22 +225,12 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   Future<void> _doInit() async {
     AppLogger.debug(
         _tag, 'init — loading first batch (limit=$_initialPageSize, offset=0)');
-    _window.clear();
-    _windowStartOffset = 0;
+    _resetWindow();
     state = PokemonSearchState.initial();
     try {
-      final page =
-          await _repository.getPokemonList(limit: _initialPageSize, offset: 0);
-      _window.addAll(page.items);
+      final page = await _fetchInitialPage();
+      _applyInitialPageToState(page);
       AppLogger.info(_tag, 'init complete — ${_window.length} items loaded');
-      state = state.copyWith(
-        items: List.unmodifiable(_window),
-        isLoading: false,
-        windowStartOffset: 0,
-        hasMore: page.hasMore,
-        hasPrevious: false,
-        clearError: true,
-      );
     } catch (e, s) {
       AppLogger.error(_tag, 'init failed', error: e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: _errorMessage(e));
@@ -295,29 +285,43 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
       clearError: true,
     );
 
-    _window.clear();
-    _windowStartOffset = 0;
+    _resetWindow();
 
     try {
-      final page =
-          await _repository.getPokemonList(limit: _initialPageSize, offset: 0);
+      final page = await _fetchInitialPage();
 
       if (!mounted || state.query.isNotEmpty) return;
 
-      _window.addAll(page.items);
-      state = state.copyWith(
-        items: List.unmodifiable(_window),
-        isLoading: false,
-        windowStartOffset: 0,
-        hasMore: page.hasMore,
-        hasPrevious: false,
-        clearError: true,
-      );
+      _applyInitialPageToState(page);
     } catch (e, s) {
       if (!mounted || state.query.isNotEmpty) return;
       AppLogger.error(_tag, 'browse reload failed', error: e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: _errorMessage(e));
     }
+  }
+
+  /// Shared first-page fetch used by [init] and browse reload.
+  Future<PokemonListPage> _fetchInitialPage() {
+    return _repository.getPokemonList(limit: _initialPageSize, offset: 0);
+  }
+
+  /// Clears the raw in-memory window and resets its offset.
+  void _resetWindow() {
+    _window.clear();
+    _windowStartOffset = 0;
+  }
+
+  /// Applies the freshly fetched first page to browse state.
+  void _applyInitialPageToState(PokemonListPage page) {
+    _window.addAll(page.items);
+    state = state.copyWith(
+      items: List.unmodifiable(_window),
+      isLoading: false,
+      windowStartOffset: 0,
+      hasMore: page.hasMore,
+      hasPrevious: false,
+      clearError: true,
+    );
   }
 
   /// Returns the window filtered by [query], or all items when [query] is empty.
