@@ -1,6 +1,8 @@
 /// Full Pokémon detail screen — shown when a list tile is tapped.
 /// Fetches data via [pokemonDetailProvider] and renders stats, types,
 /// abilities, height, weight, and a large official artwork image.
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -460,15 +462,30 @@ class _CriesCardState extends State<_CriesCard> {
   /// Which cry is currently playing: 'latest', 'legacy', or null.
   String? _playing;
 
+  /// Subscription to [_player.onPlayerComplete].
+  /// Cancelled before every new play and in [dispose] to prevent listener
+  /// accumulation — each [_toggle] call used to add a new listener without
+  /// removing the old one, causing a memory leak and multiple setState calls
+  /// per completion event.
+  StreamSubscription<void>? _completeSub;
+
   @override
   void dispose() {
+    /// Cancel completion listener before releasing the player.
+    _completeSub?.cancel();
     /// Release native audio resources when widget leaves the tree.
     _player.dispose();
     super.dispose();
   }
 
   /// Plays [url] tagged by [key]; stops if already playing same key.
+  /// Cancels any previous [onPlayerComplete] subscription before registering
+  /// a new one so only one listener exists at any time.
   Future<void> _toggle(String key, String url) async {
+    /// Always cancel before any state change to avoid stale listener firing.
+    _completeSub?.cancel();
+    _completeSub = null;
+
     if (_playing == key) {
       await _player.stop();
       setState(() => _playing = null);
@@ -476,8 +493,8 @@ class _CriesCardState extends State<_CriesCard> {
       await _player.stop();
       await _player.play(UrlSource(url));
       setState(() => _playing = key);
-      /// Reset playing state when audio finishes naturally.
-      _player.onPlayerComplete.listen((_) {
+      /// Register exactly one completion listener for this play session.
+      _completeSub = _player.onPlayerComplete.listen((_) {
         if (mounted) setState(() => _playing = null);
       });
     }

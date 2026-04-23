@@ -5,6 +5,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/weather/data/weather_repository.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
@@ -88,9 +89,19 @@ class WeatherController extends StateNotifier<WeatherState> {
         lon: useLon,
       );
     } catch (e) {
-      /// Emit error state — screen shows retry button with the error message.
-      state = WeatherState(error: e.toString(), lat: useLat, lon: useLon);
+      /// Emit error state — screen shows retry button with user-friendly message.
+      state = WeatherState(error: _errorMessage(e), lat: useLat, lon: useLon);
     }
+  }
+
+  /// Translates typed exceptions into short user-facing strings.
+  /// Mirrors [PokemonSearchController._errorMessage] so both features
+  /// show consistent error copy rather than raw exception class names.
+  String _errorMessage(Object e) {
+    if (e is NetworkException) return 'No internet connection.';
+    if (e is ServerException) return 'Server error (${e.statusCode}).';
+    if (e is ParseException) return 'Data error — please try again.';
+    return 'Something went wrong.';
   }
 
   /// Appends the next [_pageSize] items from [_allPokemon] into [state.pokemon].

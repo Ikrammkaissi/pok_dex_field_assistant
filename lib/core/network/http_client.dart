@@ -2,6 +2,7 @@
 /// Translates all failure modes into typed exceptions so callers never
 /// handle raw [http.Response] or socket errors directly.
 /// Inject a fake [http.Client] in tests to avoid real network calls.
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -16,6 +17,9 @@ class PokeApiHttpClient {
 
   /// Logger tag for this class.
   static const _tag = 'HttpClient';
+
+  /// Maximum time to wait for a response before throwing [NetworkException].
+  static const _timeout = Duration(seconds: 15);
 
   /// The underlying HTTP client — injected so tests can substitute a fake.
   final http.Client _client;
@@ -34,11 +38,10 @@ class PokeApiHttpClient {
   Future<Map<String, dynamic>> get(String path) async {
     /// Build the full URI by appending path to the base URL.
     final uri = Uri.parse('$_baseUrl$path');
-  //  AppLogger.debug(_tag, 'GET $uri');
 
     try {
-      /// Send request — SocketException propagates on network failure.
-      final response = await _client.get(uri);
+      /// Send request — times out after [_timeout]; SocketException on no network.
+      final response = await _client.get(uri).timeout(_timeout);
 
       /// Treat any 2xx status code as success.
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -52,6 +55,10 @@ class PokeApiHttpClient {
         statusCode: response.statusCode,
         message: 'HTTP ${response.statusCode} for $path',
       );
+    } on TimeoutException catch (e, s) {
+      /// Request exceeded [_timeout] — treat as a network failure.
+      AppLogger.error(_tag, 'Timeout — $path', error: e, stackTrace: s);
+      throw NetworkException('Request timed out.');
     } on SocketException catch (e, s) {
       /// No connectivity, DNS failure, or connection refused.
       AppLogger.error(_tag, 'Network failure — $path',
@@ -65,7 +72,7 @@ class PokeApiHttpClient {
       AppLogger.error(_tag, 'Parse failure — $path', error: e, stackTrace: s);
       rethrow;
     } catch (e, s) {
-      /// Catch-all for TLS failures, timeouts, and other unexpected errors.
+      /// Catch-all for TLS failures and other unexpected errors.
       AppLogger.error(_tag, 'Unexpected error — $path', error: e, stackTrace: s);
       throw NetworkException('Unexpected error: $e');
     }

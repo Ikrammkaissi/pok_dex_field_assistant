@@ -75,8 +75,12 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
   }
 
   /// Triggers [WeatherController.loadMore] when the user reaches the list bottom.
+  ///
+  /// Uses a threshold of 80px rather than exact `== 0` comparison — Flutter
+  /// scroll physics produce fractional extents that may never equal zero exactly,
+  /// silently preventing pagination. [loadMore] guards against concurrent calls.
   void _onScroll() {
-    if (_scrollController.position.extentAfter == 0) {
+    if (_scrollController.position.extentAfter < 80) {
       ref.read(weatherControllerProvider.notifier).loadMore();
     }
   }

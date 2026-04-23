@@ -3,6 +3,8 @@
 /// empty state, and a windowed list (max 300 items) that loads more on scroll
 /// in both directions and discards out-of-window pages.
 /// All data logic lives in [PokemonSearchController]; this file is pure UI.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,6 +34,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   /// Attached to the list to detect scroll position for pagination.
   late final ScrollController _scrollController;
 
+  /// Debounce timer — cancelled and restarted on every keystroke so the
+  /// controller's search() is only called 300ms after the user stops typing.
+  /// Without this, each character fires getPokemonList(limit:100) which spawns
+  /// up to 100 concurrent detail requests per keystroke.
+  Timer? _searchDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -41,24 +49,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   /// Triggers forward or backward page loads based on scroll proximity to
   /// the list edges.
+  ///
+  /// Uses a threshold of 80px rather than exact `== 0` comparison because
+  /// Flutter's scroll physics produce fractional pixel extents that may never
+  /// equal exactly zero, silently preventing pagination from triggering.
+  /// [loadMore] and [loadPrevious] are both no-ops while a load is in flight
+  /// so multiple triggers during a slow deceleration are safe.
   void _onScroll() {
     final pos = _scrollController.position;
     final controller =
         ref.read(pokemonSearchControllerProvider.notifier);
 
-    /// Exact bottom edge -> load next page.
-    if (pos.extentAfter == 0) {
+    /// Within 80px of the bottom edge → load next page.
+    if (pos.extentAfter < 80) {
       controller.loadMore();
     }
 
-    /// Exact top edge -> load previous page.
-    if (pos.extentBefore == 0) {
+    /// Within 80px of the top edge → load previous page.
+    if (pos.extentBefore < 80) {
       controller.loadPrevious();
     }
   }
 
+  /// Debounces search input — cancels pending timer and starts a new 300ms one.
+  /// Only calls controller.search() after the user stops typing for 300ms,
+  /// preventing up to 100 concurrent HTTP requests per keystroke.
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      ref.read(pokemonSearchControllerProvider.notifier).search(query);
+    });
+  }
+
   @override
   void dispose() {
+    /// Cancel any pending debounce timer to avoid calling search() after unmount.
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -118,7 +144,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         children: [
           _SearchBar(
             controller: _searchController,
-            onChanged: controller.search,
+            /// Use debounced handler — prevents N concurrent requests per keystroke.
+            onChanged: _onSearchChanged,
           ),
           Expanded(
             child: _Content(
