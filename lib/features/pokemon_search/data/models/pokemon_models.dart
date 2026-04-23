@@ -3,6 +3,46 @@
 /// Both parse directly from PokéAPI JSON — no separate domain entities needed.
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 
+/// Single learnable move with learn method and level (from latest version group).
+class MoveEntry {
+  /// Hyphenated API move name (e.g. 'razor-wind').
+  final String name;
+
+  /// How the move is learned (e.g. 'level-up', 'machine', 'egg', 'tutor').
+  final String learnMethod;
+
+  /// Level at which move is learned; 0 means not level-up (machine/egg/tutor).
+  final int levelLearnedAt;
+
+  /// Creates an immutable [MoveEntry].
+  const MoveEntry({
+    required this.name,
+    required this.learnMethod,
+    required this.levelLearnedAt,
+  });
+
+  /// Parses from a single entry in the `moves` JSON array.
+  /// Uses last version_group_details entry (most recently added game).
+  factory MoveEntry.fromJson(Map<String, dynamic> json) {
+    final name = json['move']['name'] as String;
+    final details = json['version_group_details'] as List<dynamic>;
+    /// Last entry tends to be the most recent game version.
+    final latest = details.isNotEmpty
+        ? details.last as Map<String, dynamic>
+        : <String, dynamic>{};
+    final learnMethod =
+        (latest['move_learn_method'] as Map<String, dynamic>?)?['name']
+            as String? ??
+        '';
+    final levelLearnedAt = latest['level_learned_at'] as int? ?? 0;
+    return MoveEntry(
+      name: name,
+      learnMethod: learnMethod,
+      levelLearnedAt: levelLearnedAt,
+    );
+  }
+}
+
 /// Lightweight model for one row in the search list.
 /// Parsed from `/pokemon/{nameOrId}` detail response because the bare
 /// list endpoint returns only name + url — no sprites.
@@ -94,8 +134,8 @@ class PokemonDetail {
   /// Total number of moves this Pokémon can learn.
   final int moveCount;
 
-  /// All learnable move names in API order.
-  final List<String> moves;
+  /// All learnable moves with learn method and level.
+  final List<MoveEntry> moves;
 
   /// All type names in slot order (e.g. ['fire', 'flying']).
   final List<String> types;
@@ -111,6 +151,15 @@ class PokemonDetail {
 
   /// Base stat values keyed by stat name (e.g. {'hp': 78, 'attack': 84}).
   final Map<String, int> stats;
+
+  /// Game version names this Pokémon appears in (e.g. ['red', 'blue', 'gold']).
+  final List<String> gameIndices;
+
+  /// Latest cry audio URL (OGG) — modern sound used in recent games.
+  final String cryLatestUrl;
+
+  /// Legacy cry audio URL (OGG) — original 8-bit sound from older games.
+  final String cryLegacyUrl;
 
   /// Creates an immutable [PokemonDetail].
   const PokemonDetail({
@@ -130,6 +179,9 @@ class PokemonDetail {
     required this.weight,
     required this.abilities,
     required this.stats,
+    required this.gameIndices,
+    required this.cryLatestUrl,
+    required this.cryLegacyUrl,
   });
 
   /// Parses from a `/pokemon/{nameOrId}` JSON map.
@@ -175,11 +227,10 @@ class PokemonDetail {
               s['base_stat'] as int,
       };
 
-      /// Parse learnable moves — extract name from each entry.
+      /// Parse learnable moves — name + learn method + level from latest version.
       final movesRaw = json['moves'] as List<dynamic>? ?? [];
       final moves = movesRaw
-          .map((m) =>
-              (m as Map<String, dynamic>)['move']['name'] as String)
+          .map((m) => MoveEntry.fromJson(m as Map<String, dynamic>))
           .toList();
       final moveCount = moves.length;
 
@@ -202,6 +253,18 @@ class PokemonDetail {
         weight: json['weight'] as int,
         abilities: abilities,
         stats: stats,
+        /// Extract version name from each game_indices entry.
+        gameIndices: (json['game_indices'] as List<dynamic>? ?? [])
+            .map((g) =>
+                (g as Map<String, dynamic>)['version']['name'] as String)
+            .toList(),
+        /// Parse cry URLs — null if not present for this Pokémon form.
+        cryLatestUrl: (json['cries'] as Map<String, dynamic>?)?['latest']
+                as String? ??
+            '',
+        cryLegacyUrl: (json['cries'] as Map<String, dynamic>?)?['legacy']
+                as String? ??
+            '',
       );
     } catch (e) {
       /// Wrap any cast or null error in a typed ParseException.

@@ -1,6 +1,7 @@
 /// Full Pokémon detail screen — shown when a list tile is tapped.
 /// Fetches data via [pokemonDetailProvider] and renders stats, types,
 /// abilities, height, weight, and a large official artwork image.
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
@@ -128,17 +129,29 @@ class _DetailBodyState extends State<_DetailBody> {
           ),
           const SizedBox(height: 16),
 
-          /// Sprite gallery — all four small sprite variants.
+          /// Cry audio player — latest and legacy sounds.
+          _CriesCard(
+            latestUrl: detail.cryLatestUrl,
+            legacyUrl: detail.cryLegacyUrl,
+          ),
+          const SizedBox(height: 16),
+
+          /// Sprite gallery — normal or shiny variants matching hero image mode.
           _SpriteGallery(
             frontDefault: detail.spriteUrl,
             backDefault: detail.backSpriteUrl,
             frontShiny: detail.frontShinySpriteUrl,
             backShiny: detail.backShinySpriteUrl,
+            isShiny: _showShiny,
           ),
           const SizedBox(height: 16),
 
           /// Abilities list — hidden ability flagged.
           _AbilitiesCard(abilities: detail.abilities),
+          const SizedBox(height: 16),
+
+          /// Games this Pokémon appears in.
+          _GameIndicesCard(gameIndices: detail.gameIndices),
           const SizedBox(height: 16),
 
           /// Base stat bars.
@@ -397,7 +410,141 @@ class _StatItem extends StatelessWidget {
 }
 
 /// Horizontal scrollable row of small sprite variants.
-/// Shows front/back in normal and shiny — skips empty URLs.
+/// Card with play buttons for the latest and legacy Pokémon cry audio.
+/// Stateful — owns [AudioPlayer] lifecycle and tracks playback state.
+class _CriesCard extends StatefulWidget {
+  /// Latest cry OGG URL (modern games).
+  final String latestUrl;
+
+  /// Legacy cry OGG URL (older games).
+  final String legacyUrl;
+
+  /// Creates [_CriesCard] for the given cry URLs.
+  const _CriesCard({required this.latestUrl, required this.legacyUrl});
+
+  @override
+  State<_CriesCard> createState() => _CriesCardState();
+}
+
+class _CriesCardState extends State<_CriesCard> {
+  /// Single player — only one cry plays at a time.
+  final _player = AudioPlayer();
+
+  /// Which cry is currently playing: 'latest', 'legacy', or null.
+  String? _playing;
+
+  @override
+  void dispose() {
+    /// Release native audio resources when widget leaves the tree.
+    _player.dispose();
+    super.dispose();
+  }
+
+  /// Plays [url] tagged by [key]; stops if already playing same key.
+  Future<void> _toggle(String key, String url) async {
+    if (_playing == key) {
+      await _player.stop();
+      setState(() => _playing = null);
+    } else {
+      await _player.stop();
+      await _player.play(UrlSource(url));
+      setState(() => _playing = key);
+      /// Reset playing state when audio finishes naturally.
+      _player.onPlayerComplete.listen((_) {
+        if (mounted) setState(() => _playing = null);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasBoth =
+        widget.latestUrl.isNotEmpty && widget.legacyUrl.isNotEmpty;
+    final hasAny =
+        widget.latestUrl.isNotEmpty || widget.legacyUrl.isNotEmpty;
+
+    if (!hasAny) return const SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cry',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                if (widget.latestUrl.isNotEmpty)
+                  _CryButton(
+                    label: hasBoth ? 'Latest' : 'Play Cry',
+                    isPlaying: _playing == 'latest',
+                    onTap: () => _toggle('latest', widget.latestUrl),
+                  ),
+                if (hasBoth) const SizedBox(width: 12),
+                if (widget.legacyUrl.isNotEmpty)
+                  _CryButton(
+                    label: 'Legacy',
+                    isPlaying: _playing == 'legacy',
+                    onTap: () => _toggle('legacy', widget.legacyUrl),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Single play/stop button for one cry variant.
+class _CryButton extends StatelessWidget {
+  /// Display label shown next to the icon.
+  final String label;
+
+  /// Whether this cry is currently playing.
+  final bool isPlaying;
+
+  /// Called when button is tapped.
+  final VoidCallback onTap;
+
+  /// Creates a [_CryButton].
+  const _CryButton({
+    required this.label,
+    required this.isPlaying,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return FilledButton.tonal(
+      onPressed: onTap,
+      style: isPlaying
+          ? FilledButton.styleFrom(
+              backgroundColor: scheme.primaryContainer,
+            )
+          : null,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(isPlaying ? Icons.stop_rounded : Icons.volume_up_rounded,
+              size: 18),
+          const SizedBox(width: 6),
+          Text(label),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shows front/back sprites — normal set or shiny set depending on [isShiny].
 class _SpriteGallery extends StatelessWidget {
   /// Front-default sprite URL.
   final String frontDefault;
@@ -411,25 +558,27 @@ class _SpriteGallery extends StatelessWidget {
   /// Back-shiny sprite URL.
   final String backShiny;
 
+  /// When true, shows shiny variants; otherwise shows normal variants.
+  final bool isShiny;
+
   /// Creates [_SpriteGallery] from four sprite URLs.
   const _SpriteGallery({
     required this.frontDefault,
     required this.backDefault,
     required this.frontShiny,
     required this.backShiny,
+    required this.isShiny,
   });
 
   @override
   Widget build(BuildContext context) {
-    /// Label–URL pairs; filter out entries with empty URLs.
-    final sprites = <(String, String)>[
-      ('Front', frontDefault),
-      ('Back', backDefault),
-      ('Front ✦', frontShiny),
-      ('Back ✦', backShiny),
-    ].where((s) => s.$2.isNotEmpty).toList();
+    /// Show shiny or normal pair depending on toggle; skip empty URLs.
+    final sprites = isShiny
+        ? <(String, String)>[('Front', frontShiny), ('Back', backShiny)]
+        : <(String, String)>[('Front', frontDefault), ('Back', backDefault)];
+    final visible = sprites.where((s) => s.$2.isNotEmpty).toList();
 
-    if (sprites.isEmpty) return const SizedBox.shrink();
+    if (visible.isEmpty) return const SizedBox.shrink();
 
     return Card(
       child: Padding(
@@ -448,7 +597,7 @@ class _SpriteGallery extends StatelessWidget {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: sprites.map((s) {
+                children: visible.map((s) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 12),
                     child: Column(
@@ -555,6 +704,83 @@ class _AbilitiesCard extends StatelessWidget {
                 ),
               );
             }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Card showing all game versions this Pokémon appears in as wrapped chips.
+class _GameIndicesCard extends StatelessWidget {
+  /// Version names in API order (e.g. ['red', 'blue', 'gold']).
+  final List<String> gameIndices;
+
+  /// Creates [_GameIndicesCard] for [gameIndices].
+  const _GameIndicesCard({required this.gameIndices});
+
+  /// Converts hyphenated version name to title-cased display name.
+  String _display(String name) => name
+      .split('-')
+      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
+      .join(' ');
+
+  @override
+  Widget build(BuildContext context) {
+    if (gameIndices.isEmpty) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Available In',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: scheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${gameIndices.length}',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            /// Wrap chips — they flow to next line automatically.
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: gameIndices.map((g) {
+                return Chip(
+                  label: Text(
+                    _display(g),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSecondaryContainer,
+                    ),
+                  ),
+                  backgroundColor: scheme.secondaryContainer,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),
@@ -677,10 +903,22 @@ class _StatBar extends StatelessWidget {
   }
 }
 
-/// Table listing all learnable moves, two per row, sorted alphabetically.
+/// Move method display labels and sort priority.
+const _methodLabels = <String, String>{
+  'level-up': 'Level Up',
+  'machine': 'TM/HM',
+  'egg': 'Egg',
+  'tutor': 'Tutor',
+};
+
+/// Sort order for learn method groups.
+const _methodOrder = ['level-up', 'machine', 'egg', 'tutor'];
+
+/// Card showing all learnable moves grouped by learn method.
+/// Within each group: level-up sorted by level, rest alphabetical.
 class _MovesCard extends StatelessWidget {
-  /// All learnable move names in display order.
-  final List<String> moves;
+  /// All learnable moves with method and level data.
+  final List<MoveEntry> moves;
 
   /// Creates [_MovesCard] for [moves].
   const _MovesCard({required this.moves});
@@ -695,8 +933,33 @@ class _MovesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (moves.isEmpty) return const SizedBox.shrink();
 
-    /// Sort alphabetically for easier scanning.
-    final sorted = [...moves]..sort();
+    /// Group moves by learn method.
+    final groups = <String, List<MoveEntry>>{};
+    for (final m in moves) {
+      (groups[m.learnMethod] ??= []).add(m);
+    }
+
+    /// Sort each group: level-up by level asc, others alphabetically.
+    for (final entry in groups.entries) {
+      if (entry.key == 'level-up') {
+        entry.value.sort((a, b) => a.levelLearnedAt.compareTo(b.levelLearnedAt));
+      } else {
+        entry.value.sort((a, b) => a.name.compareTo(b.name));
+      }
+    }
+
+    /// Render known methods first in priority order, unknowns after.
+    final orderedKeys = [
+      ..._methodOrder.where(groups.containsKey),
+      ...groups.keys.where((k) => !_methodOrder.contains(k)),
+    ];
+
+    final scheme = Theme.of(context).colorScheme;
+    final labelStyle = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: scheme.outline);
+    final valueStyle = Theme.of(context).textTheme.bodySmall;
 
     return Card(
       child: Padding(
@@ -704,6 +967,7 @@ class _MovesCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            /// Header with total count badge.
             Row(
               children: [
                 Text(
@@ -714,12 +978,11 @@ class _MovesCard extends StatelessWidget {
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 8),
-                /// Move count badge.
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    color: scheme.secondaryContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -730,62 +993,64 @@ class _MovesCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            /// Two-column table using DataTable for aligned rows.
-            DataTable(
-              /// Compact column spacing.
-              columnSpacing: 16,
-              headingRowHeight: 32,
-              dataRowMinHeight: 28,
-              dataRowMaxHeight: 36,
-              dividerThickness: 0,
-              columns: const [
-                DataColumn(label: Text('#')),
-                DataColumn(label: Text('Move')),
-                DataColumn(label: Text('#')),
-                DataColumn(label: Text('Move')),
-              ],
-              rows: List.generate(
-                (sorted.length / 2).ceil(),
-                (i) {
-                  /// Left cell — always exists.
-                  final leftIdx = i * 2;
-                  /// Right cell — may not exist for odd-count lists.
-                  final rightIdx = leftIdx + 1;
-                  final hasRight = rightIdx < sorted.length;
 
-                  return DataRow(cells: [
-                    DataCell(Text(
-                      '${leftIdx + 1}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
+            /// One section per learn method.
+            for (final key in orderedKeys) ...[
+              /// Section header — method label + group count.
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: Row(
+                  children: [
+                    Text(
+                      _methodLabels[key] ?? _display(key),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.bold,
                           ),
-                    )),
-                    DataCell(Text(
-                      _display(sorted[leftIdx]),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    )),
-                    DataCell(hasRight
-                        ? Text(
-                            '${rightIdx + 1}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.outline,
-                                ),
-                          )
-                        : const SizedBox.shrink()),
-                    DataCell(hasRight
-                        ? Text(
-                            _display(sorted[rightIdx]),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          )
-                        : const SizedBox.shrink()),
-                  ]);
-                },
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '(${groups[key]!.length})',
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(color: scheme.outline),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              /// DataTable for this group.
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columnSpacing: 16,
+                  headingRowHeight: 28,
+                  dataRowMinHeight: 28,
+                  dataRowMaxHeight: 32,
+                  dividerThickness: 0.5,
+                  columns: [
+                    const DataColumn(label: Text('#')),
+                    const DataColumn(label: Text('Move')),
+                    /// Show Lv. column only for level-up moves.
+                    if (key == 'level-up')
+                      const DataColumn(label: Text('Lv.'), numeric: true),
+                  ],
+                  rows: groups[key]!.asMap().entries.map((e) {
+                    return DataRow(cells: [
+                      DataCell(Text('${e.key + 1}', style: labelStyle)),
+                      DataCell(Text(_display(e.value.name), style: valueStyle)),
+                      if (key == 'level-up')
+                        DataCell(Text(
+                          e.value.levelLearnedAt == 0
+                              ? '—'
+                              : '${e.value.levelLearnedAt}',
+                          style: valueStyle,
+                        )),
+                    ]);
+                  }).toList(),
+                ),
+              ),
+            ],
           ],
         ),
       ),

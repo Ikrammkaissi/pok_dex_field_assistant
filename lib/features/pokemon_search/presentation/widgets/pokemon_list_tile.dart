@@ -20,7 +20,8 @@ class PokemonListTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ListTile(
         /// Navigate to the detail screen for this Pokémon.
-        onTap: () => context.go(AppRoutes.detailFor(item.name)),
+        /// push preserves the search screen in the stack so back button works.
+        onTap: () => context.push(AppRoutes.detailFor(item.name)),
         /// Sprite thumbnail — fixed 56×56 box; fallback icon on load failure.
         leading: SizedBox(
           width: 56,
