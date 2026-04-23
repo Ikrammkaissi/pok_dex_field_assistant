@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pok_dex_field_assistant/app/router.dart';
+
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
+
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
@@ -99,8 +101,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         title: const Text('Pokédex'),
         centerTitle: false,
         actions: [
+
+          /// Navigates to the weather suggestion screen.
+          IconButton(
+            icon: const Icon(Icons.wb_sunny_outlined),
+            tooltip: 'Suggest Pokémon by Weather',
+            onPressed: () => context.push(AppRoutes.weather),
+          ),
+
           /// Shows saved count badge when bookmarks exist; navigates to bookmarks screen.
           _BookmarkNavButton(),
+
         ],
       ),
       body: Column(

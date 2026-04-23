@@ -1,0 +1,83 @@
+/// Thin HTTP wrapper scoped to the open-meteo base URL.
+/// Mirrors [PokeApiHttpClient] structure — translates all failure modes into
+/// typed exceptions so callers never handle raw responses directly.
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
+import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
+
+/// Wraps [http.Client] with open-meteo-scoped GET requests and typed error handling.
+class WeatherHttpClient {
+  /// open-meteo API base URL — all [get] paths are appended here.
+  static const _baseUrl = 'https://api.open-meteo.com/v1';
+
+  /// Logger tag for this class.
+  static const _tag = 'WeatherHttpClient';
+
+  /// The underlying HTTP client — injected so tests can substitute a fake.
+  final http.Client _client;
+
+  /// Creates a [WeatherHttpClient] backed by [client].
+  const WeatherHttpClient(this._client);
+
+  /// Sends `GET [_baseUrl][path]` and returns the decoded JSON body as a map.
+  ///
+  /// [path] must start with `/` (e.g. `/forecast?latitude=48.8&longitude=2.3&current_weather=true`).
+  ///
+  /// Throws:
+  /// - [NetworkException] for socket or connectivity failures.
+  /// - [ServerException] for non-2xx HTTP responses.
+  /// - [ParseException] if the body is not a valid JSON object.
+  Future<Map<String, dynamic>> get(String path) async {
+    /// Build the full URI by appending path to the base URL.
+    final uri = Uri.parse('$_baseUrl$path');
+
+    try {
+      /// Send request — SocketException propagates on network failure.
+      final response = await _client.get(uri);
+
+      /// Treat any 2xx status code as success.
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return _decodeBody(response.body, path);
+      }
+
+      /// Non-2xx means a server-side error.
+      AppLogger.warning(_tag, 'Server error ${response.statusCode} — $path');
+      throw ServerException(
+        statusCode: response.statusCode,
+        message: 'HTTP ${response.statusCode} for $path',
+      );
+    } on SocketException catch (e, s) {
+      /// No connectivity, DNS failure, or connection refused.
+      AppLogger.error(_tag, 'Network failure — $path', error: e, stackTrace: s);
+      throw NetworkException('Network error: ${e.message}');
+    } on ServerException {
+      /// Already typed and logged above — propagate unchanged.
+      rethrow;
+    } on ParseException catch (e, s) {
+      /// Log parse failures so we know which endpoint returned bad JSON.
+      AppLogger.error(_tag, 'Parse failure — $path', error: e, stackTrace: s);
+      rethrow;
+    } catch (e, s) {
+      /// Catch-all for TLS failures, timeouts, and other unexpected errors.
+      AppLogger.error(_tag, 'Unexpected error — $path', error: e, stackTrace: s);
+      throw NetworkException('Unexpected error: $e');
+    }
+  }
+
+  /// Decodes [body] as a JSON object map.
+  /// Throws [ParseException] if the body is not valid JSON or not a map.
+  Map<String, dynamic> _decodeBody(String body, String path) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      /// open-meteo always returns a JSON object at the top level.
+      throw ParseException(
+          'Expected JSON object at $path, got ${decoded.runtimeType}');
+    } on FormatException catch (e) {
+      throw ParseException('Invalid JSON at $path: ${e.message}');
+    }
+  }
+}

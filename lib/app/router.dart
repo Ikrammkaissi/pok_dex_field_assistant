@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/screens/bookmarks_screen.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/screens/detail_screen.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/screens/search_screen.dart';
+import 'package:pok_dex_field_assistant/features/weather/presentation/screens/weather_pokemon_screen.dart';
 
 /// Route path constants — prevents magic strings in widgets.
 class AppRoutes {
@@ -14,8 +15,13 @@ class AppRoutes {
   /// Use [detailFor] to build a concrete path.
   static const String detail = '/pokemon/:name';
 
+
+  /// Path for the weather-based Pokémon suggestion screen.
+  static const String weather = '/weather';
+
   /// Path for the saved/bookmarked Pokémon screen.
   static const String bookmarks = '/bookmarks';
+
 
   /// Returns the concrete detail path for [pokemonName].
   static String detailFor(String pokemonName) => '/pokemon/$pokemonName';
@@ -43,10 +49,18 @@ final appRouter = GoRouter(
       ),
     ),
 
+
+    /// Weather suggestion screen — navigated to from the search screen AppBar button.
+    GoRoute(
+      path: AppRoutes.weather,
+      /// No path parameters — screen fetches its own weather on init.
+      builder: (context, state) => const WeatherPokemonScreen(),
+    ),
     /// Bookmarks screen — shows saved Pokémon.
     GoRoute(
       path: AppRoutes.bookmarks,
       builder: (context, state) => const BookmarksScreen(),
+
     ),
   ],
 );

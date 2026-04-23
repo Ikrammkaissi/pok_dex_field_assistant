@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/app/app.dart';
+import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/pokemon_repository.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Fake repository — returns two items with no HTTP calls.
@@ -35,12 +37,21 @@ class _FakeRepository implements PokemonRepository {
 // ---------------------------------------------------------------------------
 
 void main() {
+  /// Reset SharedPreferences mock state before each test.
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('Search screen renders AppBar title', (tester) async {
-    /// Override the repository provider with a fake that makes no HTTP calls.
+    final prefs = await SharedPreferences.getInstance();
+
+    /// Override both the Pokémon repo and SharedPreferences so bookmark
+    /// providers (added to SearchScreen) can initialise without error.
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           pokemonRepositoryProvider.overrideWithValue(_FakeRepository()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: const App(),
       ),
@@ -52,10 +63,13 @@ void main() {
   });
 
   testWidgets('Search screen shows list after data loads', (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           pokemonRepositoryProvider.overrideWithValue(_FakeRepository()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: const App(),
       ),
@@ -70,10 +84,13 @@ void main() {
   });
 
   testWidgets('Search bar is visible on screen', (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           pokemonRepositoryProvider.overrideWithValue(_FakeRepository()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: const App(),
       ),
