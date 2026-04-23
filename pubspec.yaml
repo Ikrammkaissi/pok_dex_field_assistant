@@ -35,6 +35,20 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # State management — lower boilerplate than Bloc at this scale.
+  flutter_riverpod: ^2.6.1
+
+  # Declarative routing integrated with Navigator 2.0.
+  go_router: ^14.6.3
+
+  # HTTP client — injected so tests can substitute a fake.
+  http: ^1.2.2
+
+  # Structured logging with level filtering and pluggable outputs.
+  # Chosen over dart:developer because it supports runtime level control,
+  # pretty-printing in debug, and a LogOutput interface for remote sinks.
+  logger: ^2.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
