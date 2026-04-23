@@ -4,6 +4,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:pok_dex_field_assistant/core/network/http_client.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/pokemon_repository.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_controller.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
@@ -24,6 +25,13 @@ final httpClientProvider = Provider<PokeApiHttpClient>((ref) {
 final pokemonRepositoryProvider = Provider<PokemonRepository>((ref) {
   /// Wire the impl directly to the HTTP client — no datasource layer.
   return PokemonRepositoryImpl(ref.watch(httpClientProvider));
+});
+
+/// Fetches full detail for a single Pokémon by name or id string.
+/// Cached per-name by Riverpod until the provider scope is disposed.
+final pokemonDetailProvider =
+    FutureProvider.family<PokemonDetail, String>((ref, nameOrId) {
+  return ref.watch(pokemonRepositoryProvider).getPokemonDetail(nameOrId);
 });
 
 /// Provides [PokemonSearchController] and exposes [PokemonSearchState].

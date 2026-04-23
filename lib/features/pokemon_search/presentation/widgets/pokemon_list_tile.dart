@@ -1,6 +1,8 @@
 /// A single row in the Pokémon search list.
 /// Shows the sprite thumbnail, name, and dex number.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pok_dex_field_assistant/app/router.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
 /// Stateless card row for one [PokemonSummary].
@@ -17,6 +19,8 @@ class PokemonListTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ListTile(
+        /// Navigate to the detail screen for this Pokémon.
+        onTap: () => context.go(AppRoutes.detailFor(item.name)),
         /// Sprite thumbnail — fixed 56×56 box; fallback icon on load failure.
         leading: SizedBox(
           width: 56,

@@ -73,6 +73,9 @@ class PokemonDetail {
   /// Front-default sprite URL used as the hero image.
   final String spriteUrl;
 
+  /// Official artwork URL — high-resolution image shown on the detail screen.
+  final String officialArtworkUrl;
+
   /// All type names in slot order (e.g. ['fire', 'flying']).
   final List<String> types;
 
@@ -93,6 +96,7 @@ class PokemonDetail {
     required this.id,
     required this.name,
     required this.spriteUrl,
+    required this.officialArtworkUrl,
     required this.types,
     required this.height,
     required this.weight,
@@ -109,6 +113,12 @@ class PokemonDetail {
 
       /// Null-safe: some forms have no front_default sprite.
       final spriteUrl = sprites['front_default'] as String? ?? '';
+
+      /// Official artwork — higher resolution than front_default sprite.
+      final other = sprites['other'] as Map<String, dynamic>? ?? {};
+      final artwork = other['official-artwork'] as Map<String, dynamic>? ?? {};
+      final officialArtworkUrl =
+          artwork['front_default'] as String? ?? spriteUrl;
 
       /// Map each types entry to its type name string.
       final typesRaw = json['types'] as List<dynamic>;
@@ -134,6 +144,7 @@ class PokemonDetail {
         id: json['id'] as int,
         name: json['name'] as String,
         spriteUrl: spriteUrl,
+        officialArtworkUrl: officialArtworkUrl,
         types: types,
         /// height and weight are top-level integer fields.
         height: json['height'] as int,

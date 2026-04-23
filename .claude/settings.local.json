@@ -5,7 +5,8 @@
       "Bash(flutter test *)",
       "PowerShell(dir \"C:\\\\Users\\\\ikram\\\\OneDrive\\\\Documents\\\\pok_dex_field_assistant\\\\lib\" -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object FullName)",
       "Bash(flutter pub *)",
-      "Bash(flutter analyze *)"
+      "Bash(flutter analyze *)",
+      "Bash(cd C:\\\\\\\\Users\\\\\\\\ikram\\\\\\\\OneDrive\\\\\\\\Documents\\\\\\\\pok_dex_field_assistant)"
     ]
   }
 }
