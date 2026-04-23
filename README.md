@@ -5,7 +5,7 @@ A Flutter app for searching Pokémon, viewing detailed stats, bookmarking favour
 ---
 ## Notes
 Claude Code was used to accelerate development, while ensuring code quality.
-architecture, and decisions were reviewed and validated manually.
+Architecture, and decisions were reviewed and validated manually.
 
 ## Setup & Run
 
