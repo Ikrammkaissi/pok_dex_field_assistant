@@ -499,14 +499,14 @@ class _CriesCardState extends ConsumerState<_CriesCard> {
 
   @override
   Widget build(BuildContext context) {
-    /// Keep provider alive while this widget is mounted.
-    ref.watch(audioPlayerProvider);
     final hasBoth =
         widget.latestUrl.isNotEmpty && widget.legacyUrl.isNotEmpty;
     final hasAny =
         widget.latestUrl.isNotEmpty || widget.legacyUrl.isNotEmpty;
 
     if (!hasAny) return const SizedBox.shrink();
+    /// Keep provider alive while this widget is mounted.
+    ref.watch(audioPlayerProvider);
 
     return Card(
       child: Padding(
