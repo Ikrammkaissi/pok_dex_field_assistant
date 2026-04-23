@@ -5,6 +5,8 @@
 /// All data logic lives in [PokemonSearchController]; this file is pure UI.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pok_dex_field_assistant/app/router.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
@@ -95,6 +97,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         title: const Text('Pokédex'),
         centerTitle: false,
+        actions: [
+          /// Navigates to the weather suggestion screen.
+          IconButton(
+            icon: const Icon(Icons.wb_sunny_outlined),
+            tooltip: 'Suggest Pokémon by Weather',
+            onPressed: () => context.push(AppRoutes.weather),
+          ),
+        ],
       ),
       body: Column(
         children: [
