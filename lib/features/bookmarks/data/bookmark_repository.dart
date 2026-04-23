@@ -11,6 +11,9 @@ abstract class BookmarkRepository {
   /// Returns all bookmarked Pokémon in insertion order.
   Future<List<PokemonSummary>> getBookmarks();
 
+  /// Persists the full bookmark list in one write operation.
+  Future<void> setBookmarks(List<PokemonSummary> bookmarks);
+
   /// Persists [pokemon] as a bookmark; no-op if already bookmarked.
   Future<void> addBookmark(PokemonSummary pokemon);
 
@@ -39,6 +42,11 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       final json = jsonDecode(s) as Map<String, dynamic>;
       return PokemonSummary.fromBookmarkJson(json);
     }).toList();
+  }
+
+  @override
+  Future<void> setBookmarks(List<PokemonSummary> bookmarks) async {
+    await _persist(bookmarks);
   }
 
   @override

@@ -23,15 +23,14 @@ class BookmarkNotifier extends StateNotifier<List<PokemonSummary>> {
   /// Adds [pokemon] if not already bookmarked; removes it if it is.
   Future<void> toggle(PokemonSummary pokemon) async {
     final bookmarked = state.any((p) => p.name == pokemon.name);
-    if (bookmarked) {
-      await _repository.removeBookmark(pokemon.name);
-      /// Remove from in-memory state without a round-trip read.
-      state = state.where((p) => p.name != pokemon.name).toList();
-    } else {
-      await _repository.addBookmark(pokemon);
-      /// Append to the end to preserve insertion order.
-      state = [...state, pokemon];
-    }
+    final nextState = bookmarked
+        ? state.where((p) => p.name != pokemon.name).toList()
+        : [...state, pokemon];
+
+    /// Persist authoritative in-memory state directly to avoid read-before-write.
+    await _repository.setBookmarks(nextState);
+
+    state = nextState;
   }
 
   /// Returns true if [pokemonName] is in the current bookmark list.

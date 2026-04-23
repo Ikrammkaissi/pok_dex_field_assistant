@@ -57,6 +57,15 @@ void main() {
       expect(result.length, 1);
     });
 
+    test('setBookmarks persists full list in one operation', () async {
+      final repository = await makeRepository();
+
+      await repository.setBookmarks(const [_bulbasaur, _charmander]);
+      final result = await repository.getBookmarks();
+
+      expect(result.map((p) => p.name), ['bulbasaur', 'charmander']);
+    });
+
     test('removeBookmark removes only matching pokemon', () async {
       final repository = await makeRepository();
 

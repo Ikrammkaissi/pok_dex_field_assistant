@@ -19,17 +19,17 @@ const _charmander = PokemonSummary(
 
 class _FakeBookmarkRepository implements BookmarkRepository {
   List<PokemonSummary> stored;
-  int addCalls = 0;
-  int removeCalls = 0;
+  int setCalls = 0;
 
   _FakeBookmarkRepository({List<PokemonSummary>? initial})
       : stored = List<PokemonSummary>.from(initial ?? const []);
 
   @override
   Future<void> addBookmark(PokemonSummary pokemon) async {
-    addCalls++;
-    if (stored.any((p) => p.name == pokemon.name)) return;
-    stored = [...stored, pokemon];
+    final current = List<PokemonSummary>.from(stored);
+    if (current.any((p) => p.name == pokemon.name)) return;
+    current.add(pokemon);
+    stored = current;
   }
 
   @override
@@ -39,8 +39,13 @@ class _FakeBookmarkRepository implements BookmarkRepository {
 
   @override
   Future<void> removeBookmark(String pokemonName) async {
-    removeCalls++;
     stored = stored.where((p) => p.name != pokemonName).toList();
+  }
+
+  @override
+  Future<void> setBookmarks(List<PokemonSummary> bookmarks) async {
+    setCalls++;
+    stored = List<PokemonSummary>.from(bookmarks);
   }
 }
 
@@ -68,7 +73,7 @@ void main() {
 
       await notifier.toggle(_bulbasaur);
 
-      expect(repository.addCalls, 1);
+      expect(repository.setCalls, 1);
       expect(notifier.state.map((p) => p.name), ['bulbasaur']);
       expect(notifier.isBookmarked('bulbasaur'), isTrue);
     });
@@ -80,7 +85,7 @@ void main() {
 
       await notifier.toggle(_bulbasaur);
 
-      expect(repository.removeCalls, 1);
+      expect(repository.setCalls, 1);
       expect(notifier.state, isEmpty);
       expect(notifier.isBookmarked('bulbasaur'), isFalse);
     });
