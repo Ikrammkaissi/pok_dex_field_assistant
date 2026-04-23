@@ -15,8 +15,20 @@ class WeatherState {
   /// Current weather snapshot — null until the first successful fetch.
   final WeatherData? weather;
 
-  /// Pokémon of the suggested type — empty until fetch completes.
+  /// Currently visible Pokémon slice — grows as user loads more pages.
   final List<PokemonSummary> pokemon;
+
+  /// True when more Pokémon remain in the full type list beyond [pokemon].
+  final bool hasMore;
+
+  /// True while the next page is being appended (shows bottom spinner).
+  final bool isLoadingMore;
+
+  /// Latitude used for the current (or pending) weather fetch.
+  final double lat;
+
+  /// Longitude used for the current (or pending) weather fetch.
+  final double lon;
 
   /// Creates an immutable [WeatherState].
   const WeatherState({
@@ -24,6 +36,10 @@ class WeatherState {
     this.error,
     this.weather,
     this.pokemon = const [],
+    this.hasMore = false,
+    this.isLoadingMore = false,
+    required this.lat,
+    required this.lon,
   });
 
   /// Returns a copy of this state with the given fields overridden.
@@ -33,19 +49,21 @@ class WeatherState {
     String? error,
     WeatherData? weather,
     List<PokemonSummary>? pokemon,
+    bool? hasMore,
+    bool? isLoadingMore,
+    double? lat,
+    double? lon,
   }) {
     return WeatherState(
-      /// Override isLoading or keep current value.
       isLoading: isLoading ?? this.isLoading,
-
       /// `error` is intentionally not defaulted — caller must pass null to clear it.
       error: error,
-
-      /// Override weather or keep current value.
       weather: weather ?? this.weather,
-
-      /// Override pokemon list or keep current value.
       pokemon: pokemon ?? this.pokemon,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      lat: lat ?? this.lat,
+      lon: lon ?? this.lon,
     );
   }
 }

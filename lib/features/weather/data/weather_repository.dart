@@ -18,12 +18,9 @@ abstract class WeatherRepository {
     required double lon,
   });
 
-  /// Returns up to [limit] [PokemonSummary] items of the given [typeName].
+  /// Returns all [PokemonSummary] items of the given [typeName].
   /// Uses the PokéAPI `/type/{name}` endpoint — no extra detail calls needed.
-  Future<List<PokemonSummary>> getPokemonByType(
-    String typeName, {
-    int limit = 20,
-  });
+  Future<List<PokemonSummary>> getPokemonByType(String typeName);
 }
 
 /// Implements [WeatherRepository] using open-meteo and PokéAPI.
@@ -65,7 +62,7 @@ class WeatherRepositoryImpl implements WeatherRepository {
     }
   }
 
-  /// Fetches up to [limit] Pokémon of [typeName] from the PokéAPI type endpoint.
+  /// Fetches all Pokémon of [typeName] from the PokéAPI type endpoint.
   ///
   /// Strategy to avoid N+1 calls:
   /// - The `/type/{name}` response contains a `pokemon` array where each entry
@@ -74,11 +71,8 @@ class WeatherRepositoryImpl implements WeatherRepository {
   /// - Build the sprite URL directly: `{_spriteBase}/{id}.png`.
   /// - Construct [PokemonSummary] with no additional network calls.
   @override
-  Future<List<PokemonSummary>> getPokemonByType(
-    String typeName, {
-    int limit = 20,
-  }) async {
-    AppLogger.info(_tag, 'Fetching type "$typeName" Pokémon — limit=$limit');
+  Future<List<PokemonSummary>> getPokemonByType(String typeName) async {
+    AppLogger.info(_tag, 'Fetching type "$typeName" Pokémon — all');
     try {
       /// Fetch the type detail which includes a full pokemon list.
       final json = await _pokeClient.get('/type/$typeName');
@@ -86,9 +80,8 @@ class WeatherRepositoryImpl implements WeatherRepository {
       /// `pokemon` is an array of {pokemon: {name, url}, slot} objects.
       final pokemonList = json['pokemon'] as List<dynamic>;
 
-      /// Build summaries from the first [limit] entries without extra calls.
+      /// Build summaries for all entries without extra calls.
       final summaries = pokemonList
-          .take(limit)
           .map((entry) {
             /// Each entry wraps the pokemon under a `pokemon` key.
             final data =
@@ -112,8 +105,8 @@ class WeatherRepositoryImpl implements WeatherRepository {
           })
           .toList();
 
-      AppLogger.info(
-          _tag, 'Loaded ${summaries.length} "$typeName"-type Pokémon');
+      AppLogger.info(_tag,
+          'Loaded ${summaries.length} "$typeName"-type Pokémon');
       return summaries;
     } catch (e, s) {
       AppLogger.error(_tag, 'Failed to fetch "$typeName" type Pokémon',

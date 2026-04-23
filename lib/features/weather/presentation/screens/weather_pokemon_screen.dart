@@ -1,7 +1,7 @@
 /// Weather Pokémon suggestion screen.
-/// Shows current weather conditions and a list of Pokémon matching the
-/// weather-derived type. Reuses [PokemonListTile] so navigation to detail
-/// works exactly the same as from the search screen.
+/// Shows editable latitude/longitude fields, current weather conditions, and a
+/// list of Pokémon matching the weather-derived type. Reuses [PokemonListTile]
+/// so navigation to detail works exactly the same as from the search screen.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
@@ -10,18 +10,111 @@ import 'package:pok_dex_field_assistant/features/weather/presentation/providers/
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
 
 /// Root screen for weather-based Pokémon suggestions.
-/// Reads [weatherControllerProvider] and delegates layout to private sub-widgets.
-class WeatherPokemonScreen extends ConsumerWidget {
+/// Uses [ConsumerStatefulWidget] to manage the lat/lon [TextEditingController]s.
+class WeatherPokemonScreen extends ConsumerStatefulWidget {
   /// Creates a [WeatherPokemonScreen].
   const WeatherPokemonScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    /// Watch state so the screen rebuilds when loading/error/data changes.
-    final state = ref.watch(weatherControllerProvider);
+  ConsumerState<WeatherPokemonScreen> createState() =>
+      _WeatherPokemonScreenState();
+}
 
-    /// Read notifier once — stable ref for callbacks (no rebuild on read).
+class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
+  /// Text field controller for latitude input.
+  late final TextEditingController _latController;
+
+  /// Text field controller for longitude input.
+  late final TextEditingController _lonController;
+
+  /// Attached to the Pokémon list to detect scroll position for pagination.
+  late final ScrollController _scrollController;
+
+  /// Tracks the lat displayed in the text fields to avoid overwriting while typing.
+  double? _syncedLat;
+
+  /// Tracks the lon displayed in the text fields to avoid overwriting while typing.
+  double? _syncedLon;
+
+  @override
+  void initState() {
+    super.initState();
+    _latController = TextEditingController();
+    _lonController = TextEditingController();
+    _scrollController = ScrollController()..addListener(_onScroll);
+  }
+
+  /// Triggers [WeatherController.loadMore] when the user reaches the list bottom.
+  void _onScroll() {
+    if (_scrollController.position.extentAfter == 0) {
+      ref.read(weatherControllerProvider.notifier).loadMore();
+    }
+  }
+
+  @override
+  void dispose() {
+    _latController.dispose();
+    _lonController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Syncs text fields to new coordinates from state when they differ.
+  /// Called in [build] so the fields reflect randomly generated coords on first load.
+  void _syncFields(double lat, double lon) {
+    /// Only update when coords have actually changed — prevents cursor jumping while editing.
+    if (lat != _syncedLat) {
+      _syncedLat = lat;
+      _latController.text = lat.toStringAsFixed(4);
+    }
+    if (lon != _syncedLon) {
+      _syncedLon = lon;
+      _lonController.text = lon.toStringAsFixed(4);
+    }
+  }
+
+  /// Parses the text fields and triggers a fetch with the new coordinates.
+  /// Shows a SnackBar if either value is not a valid number.
+  void _applyCoordinates(BuildContext context) {
+    final lat = double.tryParse(_latController.text.trim());
+    final lon = double.tryParse(_lonController.text.trim());
+
+    /// Validate both fields before fetching.
+    if (lat == null || lon == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter valid numbers for lat and lon.')),
+      );
+      return;
+    }
+
+    /// Validate range.
+    if (lat < -90 || lat > 90) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Latitude must be between −90 and 90.')),
+      );
+      return;
+    }
+    if (lon < -180 || lon > 180) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Longitude must be between −180 and 180.')),
+      );
+      return;
+    }
+
+    /// Dismiss keyboard and trigger fetch with the parsed values.
+    FocusScope.of(context).unfocus();
+    ref
+        .read(weatherControllerProvider.notifier)
+        .fetchWeatherSuggestions(lat: lat, lon: lon);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(weatherControllerProvider);
     final controller = ref.read(weatherControllerProvider.notifier);
+
+    /// Sync text fields whenever the controller updates coordinates.
+    _syncFields(state.lat, state.lon);
 
     return Scaffold(
       appBar: AppBar(
@@ -30,17 +123,35 @@ class WeatherPokemonScreen extends ConsumerWidget {
         title: const Text('Suggest by Weather'),
         centerTitle: false,
         actions: [
-          /// Refresh button re-triggers weather fetch and updates suggestions.
+          /// Generates new random coordinates and re-fetches.
           IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh weather',
-            onPressed: controller.fetchWeatherSuggestions,
+            icon: const Icon(Icons.shuffle),
+            tooltip: 'Randomise location',
+            onPressed: state.isLoading
+                ? null
+                : () => controller.fetchWeatherSuggestions(randomise: true),
           ),
         ],
       ),
-      body: _WeatherContent(
-        state: state,
-        onRetry: controller.fetchWeatherSuggestions,
+      body: Column(
+        children: [
+          /// Editable coordinate fields — allow manual location override.
+          _CoordinateFields(
+            latController: _latController,
+            lonController: _lonController,
+            isLoading: state.isLoading,
+            onApply: () => _applyCoordinates(context),
+          ),
+
+          /// Weather info + Pokémon list fills the remaining space.
+          Expanded(
+            child: _WeatherContent(
+              state: state,
+              scrollController: _scrollController,
+              onRetry: controller.fetchWeatherSuggestions,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -50,15 +161,123 @@ class WeatherPokemonScreen extends ConsumerWidget {
 // Private sub-widgets
 // ---------------------------------------------------------------------------
 
+/// Two text fields (lat, lon) with an Apply button to re-fetch with new coords.
+class _CoordinateFields extends StatelessWidget {
+  /// Controller for the latitude text field.
+  final TextEditingController latController;
+
+  /// Controller for the longitude text field.
+  final TextEditingController lonController;
+
+  /// Disables the Apply button while a fetch is in progress.
+  final bool isLoading;
+
+  /// Called when the user confirms new coordinates via the Apply button or keyboard submit.
+  final VoidCallback onApply;
+
+  const _CoordinateFields({
+    required this.latController,
+    required this.lonController,
+    required this.isLoading,
+    required this.onApply,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(
+        children: [
+          /// Latitude field — takes up ~40% of the row.
+          Expanded(
+            flex: 4,
+            child: _CoordTextField(
+              controller: latController,
+              label: 'Latitude',
+              onSubmitted: (_) => onApply(),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          /// Longitude field — takes up ~40% of the row.
+          Expanded(
+            flex: 4,
+            child: _CoordTextField(
+              controller: lonController,
+              label: 'Longitude',
+              onSubmitted: (_) => onApply(),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          /// Apply button — submits the current field values.
+          FilledButton(
+            onPressed: isLoading ? null : onApply,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            ),
+            child: const Text('Go'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Single coordinate text field for numeric lat or lon input.
+class _CoordTextField extends StatelessWidget {
+  /// Controller shared with the parent so values can be read on apply.
+  final TextEditingController controller;
+
+  /// Label shown above the field.
+  final String label;
+
+  /// Called when the user presses Done/Enter on the keyboard.
+  final ValueChanged<String> onSubmitted;
+
+  const _CoordTextField({
+    required this.controller,
+    required this.label,
+    required this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(
+        signed: true,
+        decimal: true,
+      ),
+      textInputAction: TextInputAction.done,
+      onSubmitted: onSubmitted,
+      decoration: InputDecoration(
+        labelText: label,
+        isDense: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      ),
+    );
+  }
+}
+
 /// Switches between loading, error, and the weather card + Pokémon list.
 class _WeatherContent extends StatelessWidget {
   /// Current state from [WeatherController].
   final WeatherState state;
 
+  /// Attached to the list for scroll-to-bottom pagination detection.
+  final ScrollController scrollController;
+
   /// Called when the user taps Retry after an error.
   final VoidCallback onRetry;
 
-  const _WeatherContent({required this.state, required this.onRetry});
+  const _WeatherContent({
+    required this.state,
+    required this.scrollController,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -87,13 +306,24 @@ class _WeatherContent extends StatelessWidget {
         /// Pokémon list takes remaining vertical space.
         Expanded(
           child: state.pokemon.isEmpty
-              ? const Center(child: Text('No Pokémon found for this weather.'))
+              ? const Center(
+                  child: Text('No Pokémon found for this weather.'))
               : ListView.builder(
+                  controller: scrollController,
                   padding: const EdgeInsets.only(bottom: 16),
-                  itemCount: state.pokemon.length,
-                  /// Reuse the same list tile as the search screen for consistency.
-                  itemBuilder: (context, i) =>
-                      PokemonListTile(item: state.pokemon[i]),
+                  /// Extra slot at end for the bottom loading spinner.
+                  itemCount: state.pokemon.length + (state.isLoadingMore ? 1 : 0),
+                  itemBuilder: (context, i) {
+                    /// Bottom spinner while appending the next page.
+                    if (i == state.pokemon.length) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    /// Reuse the same list tile as the search screen for consistency.
+                    return PokemonListTile(item: state.pokemon[i]);
+                  },
                 ),
         ),
       ],
@@ -116,7 +346,7 @@ class _WeatherCard extends StatelessWidget {
     final type = weather.suggestedPokemonType;
 
     return Card(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -125,10 +355,8 @@ class _WeatherCard extends StatelessWidget {
             /// Condition row: emoji icon + label.
             Row(
               children: [
-                Text(
-                  weather.conditionIcon,
-                  style: const TextStyle(fontSize: 24),
-                ),
+                Text(weather.conditionIcon,
+                    style: const TextStyle(fontSize: 24)),
                 const SizedBox(width: 8),
                 Text(
                   weather.conditionLabel,
@@ -158,10 +386,7 @@ class _WeatherCard extends StatelessWidget {
             /// Type suggestion row — chip highlights the mapped Pokémon type.
             Row(
               children: [
-                Text(
-                  'Suggested type:',
-                  style: theme.textTheme.bodyMedium,
-                ),
+                Text('Suggested type:', style: theme.textTheme.bodyMedium),
                 const SizedBox(width: 8),
                 Chip(
                   /// Capitalise the type name for display.
@@ -169,11 +394,9 @@ class _WeatherCard extends StatelessWidget {
                     type[0].toUpperCase() + type.substring(1),
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  backgroundColor:
-                      theme.colorScheme.primaryContainer,
-                  labelStyle: TextStyle(
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  labelStyle:
+                      TextStyle(color: theme.colorScheme.onPrimaryContainer),
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
                 ),
@@ -204,8 +427,8 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            /// Cloud-off icon signals a connectivity or fetch failure.
-            const Icon(Icons.cloud_off_outlined, size: 64, color: Colors.grey),
+            const Icon(Icons.cloud_off_outlined,
+                size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
               message,
