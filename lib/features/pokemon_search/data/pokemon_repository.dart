@@ -105,7 +105,9 @@ class PokemonRepositoryImpl implements PokemonRepository {
     try {
       /// Fetch and parse the detail JSON directly from the HTTP client.
       final json = await _client.get('/pokemon/$nameOrId');
-      return PokemonDetail.fromJson(json);
+      final detail = PokemonDetail.fromJson(json);
+      AppLogger.debug(_tag, 'Loaded detail for "${detail.name}" (#${detail.id})');
+      return detail;
     } catch (e, s) {
       AppLogger.error(_tag, 'Failed to fetch detail for "$nameOrId"',
           error: e, stackTrace: s);

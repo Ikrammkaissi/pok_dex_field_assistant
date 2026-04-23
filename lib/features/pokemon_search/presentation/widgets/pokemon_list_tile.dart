@@ -52,8 +52,8 @@ class PokemonListTile extends ConsumerWidget {
         /// Dex number in subdued text.
         subtitle: Text(
           item.primaryType.isEmpty
-              ? '#${item.id.toString().padLeft(3, '0')}'
-              : '#${item.id.toString().padLeft(3, '0')} • ${toDisplayName(item.primaryType)}',
+              ? ''
+              : '${toDisplayName(item.primaryType)}',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         /// Bookmark toggle button — filled icon when saved, outline when not.

@@ -4,6 +4,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
 /// Contract for reading and writing persisted bookmarks.
@@ -24,6 +25,9 @@ abstract class BookmarkRepository {
 /// [SharedPreferences]-backed implementation.
 /// Bookmarks are stored as a JSON string list under [_key].
 class BookmarkRepositoryImpl implements BookmarkRepository {
+  /// Logger tag for this class.
+  static const _tag = 'BookmarkRepository';
+
   /// SharedPreferences key used for the stored list.
   static const _key = 'pokemon_bookmarks';
 
@@ -37,15 +41,19 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   Future<List<PokemonSummary>> getBookmarks() async {
     /// Read raw JSON strings; return empty list if key is absent.
     final raw = _prefs.getStringList(_key) ?? [];
-    return raw.map((s) {
+    AppLogger.debug(_tag, 'getBookmarks — ${raw.length} entries in prefs');
+    final result = raw.map((s) {
       /// Decode each stored JSON string back to a PokemonSummary.
       final json = jsonDecode(s) as Map<String, dynamic>;
       return PokemonSummary.fromBookmarkJson(json);
     }).toList();
+    AppLogger.info(_tag, 'Loaded ${result.length} bookmarks');
+    return result;
   }
 
   @override
   Future<void> setBookmarks(List<PokemonSummary> bookmarks) async {
+    AppLogger.debug(_tag, 'setBookmarks — persisting ${bookmarks.length} entries');
     await _persist(bookmarks);
   }
 
@@ -53,15 +61,25 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   Future<void> addBookmark(PokemonSummary pokemon) async {
     final current = await getBookmarks();
     /// Skip if already present — name is the stable identifier.
-    if (current.any((p) => p.name == pokemon.name)) return;
+    if (current.any((p) => p.name == pokemon.name)) {
+      AppLogger.debug(_tag, 'addBookmark — "${pokemon.name}" already bookmarked, skipping');
+      return;
+    }
     current.add(pokemon);
     await _persist(current);
+    AppLogger.info(_tag, 'addBookmark — added "${pokemon.name}", total=${current.length}');
   }
 
   @override
   Future<void> removeBookmark(String pokemonName) async {
     final current = await getBookmarks();
+    final before = current.length;
     current.removeWhere((p) => p.name == pokemonName);
+    if (current.length == before) {
+      AppLogger.warning(_tag, 'removeBookmark — "$pokemonName" not found, no-op');
+    } else {
+      AppLogger.info(_tag, 'removeBookmark — removed "$pokemonName", total=${current.length}');
+    }
     await _persist(current);
   }
 
@@ -69,5 +87,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   Future<void> _persist(List<PokemonSummary> bookmarks) async {
     final encoded = bookmarks.map((p) => jsonEncode(p.toJson())).toList();
     await _prefs.setStringList(_key, encoded);
+    AppLogger.debug(_tag, '_persist — wrote ${encoded.length} entries to prefs');
   }
 }

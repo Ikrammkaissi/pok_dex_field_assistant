@@ -6,6 +6,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
+import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/weather/data/weather_repository.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
@@ -13,6 +14,9 @@ import 'package:pok_dex_field_assistant/features/weather/presentation/providers/
 /// Orchestrates weather fetch → type mapping → Pokémon list fetch.
 /// Extends [StateNotifier] so the screen rebuilds automatically on state changes.
 class WeatherController extends StateNotifier<WeatherState> {
+  /// Logger tag for this class.
+  static const _tag = 'WeatherController';
+
   /// Number of Pokémon shown per page in the list.
   static const _pageSize = 20;
 
@@ -37,6 +41,8 @@ class WeatherController extends StateNotifier<WeatherState> {
   /// triggers the first fetch so the screen shows data as soon as it opens.
   WeatherController(this._repository)
       : super(WeatherState(lat: _randomLat(), lon: _randomLon())) {
+    AppLogger.debug(_tag,
+        'init — randomised coords lat=${state.lat.toStringAsFixed(4)}, lon=${state.lon.toStringAsFixed(4)}');
     fetchWeatherSuggestions();
   }
 
@@ -66,14 +72,20 @@ class WeatherController extends StateNotifier<WeatherState> {
       final parsedLon = double.tryParse((rawLon ?? '').trim());
 
       if (parsedLat == null || parsedLon == null) {
+        AppLogger.warning(_tag,
+            'fetchWeatherSuggestions — invalid input: rawLat="$rawLat" rawLon="$rawLon"');
         state = state.copyWith(error: 'Enter valid numbers for lat and lon.');
         return;
       }
       if (parsedLat < -90 || parsedLat > 90) {
+        AppLogger.warning(_tag,
+            'fetchWeatherSuggestions — lat out of range: $parsedLat');
         state = state.copyWith(error: 'Latitude must be between -90 and 90.');
         return;
       }
       if (parsedLon < -180 || parsedLon > 180) {
+        AppLogger.warning(_tag,
+            'fetchWeatherSuggestions — lon out of range: $parsedLon');
         state = state.copyWith(error: 'Longitude must be between -180 and 180.');
         return;
       }
@@ -85,6 +97,9 @@ class WeatherController extends StateNotifier<WeatherState> {
     /// Randomise flag wins — generate fresh coords regardless of other args.
     final useLat = randomise ? _randomLat() : (lat ?? state.lat);
     final useLon = randomise ? _randomLon() : (lon ?? state.lon);
+
+    AppLogger.debug(_tag,
+        'fetchWeatherSuggestions — lat=${useLat.toStringAsFixed(4)}, lon=${useLon.toStringAsFixed(4)}, randomise=$randomise');
 
     /// Reset to loading — clears error and pokemon list, preserves coordinates.
     state = WeatherState(isLoading: true, lat: useLat, lon: useLon);
@@ -98,12 +113,17 @@ class WeatherController extends StateNotifier<WeatherState> {
 
       /// Step 2: derive the Pokémon type from the weather conditions.
       final type = weather.suggestedPokemonType;
+      AppLogger.info(_tag,
+          'weather fetched — condition="${weather.conditionLabel}", mapped type="$type"');
 
       /// Step 3: fetch full Pokémon list for the derived type.
       _allPokemon = await _repository.getPokemonByType(type);
 
       /// Show only the first page — user scrolls to load more.
       _visibleCount = math.min(_pageSize, _allPokemon.length);
+
+      AppLogger.info(_tag,
+          'fetchWeatherSuggestions complete — type="$type", total=${_allPokemon.length}, visible=$_visibleCount, hasMore=${_visibleCount < _allPokemon.length}');
 
       /// Emit success — first page visible, hasMore signals more pages exist.
       state = WeatherState(
@@ -113,7 +133,10 @@ class WeatherController extends StateNotifier<WeatherState> {
         lat: useLat,
         lon: useLon,
       );
-    } catch (e) {
+    } catch (e, s) {
+      AppLogger.error(_tag,
+          'fetchWeatherSuggestions failed — lat=${useLat.toStringAsFixed(4)}, lon=${useLon.toStringAsFixed(4)}',
+          error: e, stackTrace: s);
       /// Emit error state — screen shows retry button with user-friendly message.
       state = WeatherState(error: _errorMessage(e), lat: useLat, lon: useLon);
     }
@@ -134,11 +157,17 @@ class WeatherController extends StateNotifier<WeatherState> {
   void loadMore() {
     if (state.isLoadingMore || !state.hasMore) return;
 
+    AppLogger.debug(_tag,
+        'loadMore — visible=$_visibleCount, total=${_allPokemon.length}');
+
     /// Signal that the bottom spinner should appear.
     state = state.copyWith(isLoadingMore: true);
 
     /// Advance the visible window by one page.
     _visibleCount = math.min(_visibleCount + _pageSize, _allPokemon.length);
+
+    AppLogger.info(_tag,
+        'loadMore complete — visible=$_visibleCount, hasMore=${_visibleCount < _allPokemon.length}');
 
     /// Emit new slice — synchronous since data is already in memory.
     state = state.copyWith(
