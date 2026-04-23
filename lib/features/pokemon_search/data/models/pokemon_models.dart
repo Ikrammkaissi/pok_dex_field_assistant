@@ -56,11 +56,15 @@ class PokemonSummary {
   /// Front-default sprite URL used as the row thumbnail.
   final String spriteUrl;
 
+  /// Primary Pokémon type (first item in the API `types` array).
+  final String primaryType;
+
   /// Creates an immutable [PokemonSummary].
   const PokemonSummary({
     required this.id,
     required this.name,
     required this.spriteUrl,
+    this.primaryType = '',
   });
 
   /// Serialises to a JSON map suitable for local storage (bookmarks).
@@ -68,6 +72,7 @@ class PokemonSummary {
         'id': id,
         'name': name,
         'spriteUrl': spriteUrl,
+        'primaryType': primaryType,
       };
 
   /// Deserialises from a locally-stored bookmark JSON map.
@@ -77,6 +82,7 @@ class PokemonSummary {
         id: json['id'] as int,
         name: json['name'] as String,
         spriteUrl: json['spriteUrl'] as String,
+        primaryType: json['primaryType'] as String? ?? '',
       );
 
   /// Parses from a `/pokemon/{nameOrId}` JSON map.
@@ -89,6 +95,14 @@ class PokemonSummary {
       /// front_default can be null for some forms — fall back to empty string.
       final spriteUrl = sprites['front_default'] as String? ?? '';
 
+      /// Primary type is the first type entry by slot order.
+      final types = json['types'] as List<dynamic>? ?? const [];
+      final primaryType = types.isNotEmpty
+          ? ((types.first as Map<String, dynamic>)['type']
+              as Map<String, dynamic>)['name'] as String? ??
+              ''
+          : '';
+
       return PokemonSummary(
         /// Pokédex number from the top-level id field.
         id: json['id'] as int,
@@ -96,6 +110,7 @@ class PokemonSummary {
         /// Lowercase hyphenated name.
         name: json['name'] as String,
         spriteUrl: spriteUrl,
+        primaryType: primaryType,
       );
     } catch (e) {
       /// Wrap any cast or null error in a typed ParseException.

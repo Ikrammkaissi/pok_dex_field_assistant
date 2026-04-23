@@ -265,6 +265,18 @@ void main() {
       );
     });
 
+    test('sets primaryType from requested type', () async {
+      final repo = _makeRepo(
+        weatherClient: _FakeWeatherClient(body: _weatherJson),
+        pokeClient: _FakePokeClient(_fireTypeJson),
+      );
+
+      final pokemon = await repo.getPokemonByType('fire');
+
+      expect(pokemon[0].primaryType, 'fire');
+      expect(pokemon[1].primaryType, 'fire');
+    });
+
     test('returns empty list when type has no Pokémon', () async {
       final repo = _makeRepo(
         weatherClient: _FakeWeatherClient(body: _weatherJson),

@@ -101,7 +101,12 @@ class WeatherRepositoryImpl implements WeatherRepository {
             /// Construct sprite URL from the known GitHub raw sprites path.
             final spriteUrl = '$_spriteBase/$id.png';
 
-            return PokemonSummary(id: id, name: name, spriteUrl: spriteUrl);
+            return PokemonSummary(
+              id: id,
+              name: name,
+              spriteUrl: spriteUrl,
+              primaryType: typeName,
+            );
           })
           .toList();
 

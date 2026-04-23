@@ -58,6 +58,7 @@ class DetailScreen extends ConsumerWidget {
                   id: detail.id,
                   name: detail.name,
                   spriteUrl: detail.spriteUrl,
+                  primaryType: detail.types.isNotEmpty ? detail.types.first : '',
                 );
                 ref.read(bookmarkNotifierProvider.notifier).toggle(summary);
               },
