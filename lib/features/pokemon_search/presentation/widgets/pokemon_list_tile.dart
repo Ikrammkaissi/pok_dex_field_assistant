@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pok_dex_field_assistant/app/router.dart';
+import 'package:pok_dex_field_assistant/core/utils/display_name.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
@@ -44,14 +45,14 @@ class PokemonListTile extends ConsumerWidget {
         ),
         /// Title-cased display name.
         title: Text(
-          _displayName(item.name),
+          toDisplayName(item.name),
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         /// Dex number in subdued text.
         subtitle: Text(
           item.primaryType.isEmpty
               ? '#${item.id.toString().padLeft(3, '0')}'
-              : '#${item.id.toString().padLeft(3, '0')} • ${_displayType(item.primaryType)}',
+              : '#${item.id.toString().padLeft(3, '0')} • ${toDisplayName(item.primaryType)}',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         /// Bookmark toggle button — filled icon when saved, outline when not.
@@ -70,16 +71,4 @@ class PokemonListTile extends ConsumerWidget {
     );
   }
 
-  /// Converts a hyphenated API name to a title-cased display name.
-  /// e.g. 'mr-mime' → 'Mr Mime', 'bulbasaur' → 'Bulbasaur'.
-  String _displayName(String name) => name
-      .split('-')
-      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-      .join(' ');
-
-  /// Converts a hyphenated type name to title-cased display text.
-  String _displayType(String type) => type
-      .split('-')
-      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-      .join(' ');
 }

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pok_dex_field_assistant/core/utils/display_name.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
@@ -42,8 +43,8 @@ class DetailScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: const BackButton(),
         title: detailAsync.maybeWhen(
-          data: (d) => Text(_displayName(d.name)),
-          orElse: () => Text(_displayName(pokemonName)),
+          data: (d) => Text(toDisplayName(d.name)),
+          orElse: () => Text(toDisplayName(pokemonName)),
         ),
         actions: [
           /// Bookmark toggle — only active once detail data is available
@@ -99,11 +100,6 @@ class DetailScreen extends ConsumerWidget {
     );
   }
 
-  /// Converts hyphenated API name to title-cased display name.
-  String _displayName(String name) => name
-      .split('-')
-      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-      .join(' ');
 }
 
 /// Scrollable body rendered once [PokemonDetail] is available.
@@ -275,10 +271,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final display = name
-        .split('-')
-        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-        .join(' ');
+    final display = toDisplayName(name);
 
     return Column(
       children: [
@@ -718,11 +711,7 @@ class _AbilitiesCard extends StatelessWidget {
             const SizedBox(height: 8),
             /// Each ability on its own row; hidden marker uses API field.
             ...abilities.map((ability) {
-              final display = ability.name
-                  .split('-')
-                  .map((w) =>
-                      w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-                  .join(' ');
+              final display = toDisplayName(ability.name);
 
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
@@ -768,12 +757,6 @@ class _GameIndicesCard extends StatelessWidget {
   /// Creates [_GameIndicesCard] for [gameIndices].
   const _GameIndicesCard({super.key, required this.gameIndices});
 
-  /// Converts hyphenated version name to title-cased display name.
-  String _display(String name) => name
-      .split('-')
-      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-      .join(' ');
-
   @override
   Widget build(BuildContext context) {
     if (gameIndices.isEmpty) return const SizedBox.shrink();
@@ -817,7 +800,7 @@ class _GameIndicesCard extends StatelessWidget {
               children: gameIndices.map((g) {
                 return Chip(
                   label: Text(
-                    _display(g),
+                    toDisplayName(g),
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSecondaryContainer,
@@ -972,12 +955,6 @@ class _MovesCard extends StatelessWidget {
   /// Creates [_MovesCard] for [moves].
   const _MovesCard({super.key, required this.moves});
 
-  /// Converts hyphenated API name to title-cased display name.
-  String _display(String name) => name
-      .split('-')
-      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-      .join(' ');
-
   @override
   Widget build(BuildContext context) {
     if (moves.isEmpty) return const SizedBox.shrink();
@@ -1051,7 +1028,7 @@ class _MovesCard extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      _methodLabels[key] ?? _display(key),
+                      _methodLabels[key] ?? toDisplayName(key),
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: scheme.primary,
                             fontWeight: FontWeight.bold,
@@ -1087,7 +1064,7 @@ class _MovesCard extends StatelessWidget {
                   rows: groups[key]!.asMap().entries.map((e) {
                     return DataRow(cells: [
                       DataCell(Text('${e.key + 1}', style: labelStyle)),
-                      DataCell(Text(_display(e.value.name), style: valueStyle)),
+                      DataCell(Text(toDisplayName(e.value.name), style: valueStyle)),
                       if (key == 'level-up')
                         DataCell(Text(
                           e.value.levelLearnedAt == 0
