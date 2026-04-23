@@ -9,11 +9,6 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
 
-/// Pixels from list edge (top or bottom) at which the next page is triggered.
-/// 500px gives enough runway to fetch and render before the user hits the edge.
-const _scrollThreshold = 1000.0;
-
-
 /// Root search screen widget — reads [pokemonSearchControllerProvider].
 /// Uses [ConsumerStatefulWidget] to manage the [TextEditingController] and
 /// [ScrollController] lifecycles.
@@ -46,13 +41,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final controller =
         ref.read(pokemonSearchControllerProvider.notifier);
 
-    /// Near bottom → load next page.
-    if (pos.pixels >= pos.maxScrollExtent - _scrollThreshold) {
+    /// Exact bottom edge -> load next page.
+    if (pos.extentAfter == 0) {
       controller.loadMore();
     }
 
-    /// Near top → load previous page.
-    if (pos.pixels <= _scrollThreshold) {
+    /// Exact top edge -> load previous page.
+    if (pos.extentBefore == 0) {
       controller.loadPrevious();
     }
   }

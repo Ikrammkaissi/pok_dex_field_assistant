@@ -46,8 +46,8 @@ class _FlatRepository implements PokemonRepository {
       throw UnimplementedError();
 }
 
-/// Multi-page repo: 400 items spread across 4 pages of 100.
-/// Simulates an API with 400 total Pokémon.
+/// Large repo with 400 total Pokémon.
+/// The controller decides the requested limit and offset.
 class _MultiPageRepository implements PokemonRepository {
   static final _all = _fakeItems(1, 400);
   int callCount = 0;
@@ -132,6 +132,15 @@ ProviderContainer _makeContainer(PokemonRepository fakeRepo) =>
       pokemonRepositoryProvider.overrideWithValue(fakeRepo),
     ]);
 
+Future<void> _loadMoreTimes(
+  PokemonSearchController controller,
+  int times,
+) async {
+  for (var i = 0; i < times; i++) {
+    await controller.loadMore();
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -194,39 +203,38 @@ void main() {
 
     tearDown(() => container.dispose());
 
-    test('appends second page — 200 items, no window shift', () async {
+    test('appends 10 items after the initial 100, no window shift', () async {
       await controller.loadMore();
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      expect(state.items.length, 200);
+      expect(state.items.length, 110);
       expect(state.windowStartOffset, 0);
       expect(state.hasPrevious, isFalse);
       expect(state.hasMore, isTrue);
     });
 
-    test('appends third page — 300 items, no window shift', () async {
-      await controller.loadMore(); // 200
-      await controller.loadMore(); // 300
+    test('keeps growing in 10-item steps before hitting the window cap',
+        () async {
+      await controller.loadMore(); // 110
+      await controller.loadMore(); // 120
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      expect(state.items.length, 300);
+      expect(state.items.length, 120);
       expect(state.windowStartOffset, 0);
     });
 
-    test('fourth load drops leading page — window stays at 300, start shifts',
+    test('21st incremental load drops the leading 10 items and shifts start',
         () async {
-      await controller.loadMore(); // 200
-      await controller.loadMore(); // 300
-      await controller.loadMore(); // would be 400 → drop first 100
+      await _loadMoreTimes(controller, 21);
 
       final state = container.read(pokemonSearchControllerProvider);
 
       expect(state.items.length, 300);
-      expect(state.windowStartOffset, 100); // leading page dropped
+      expect(state.windowStartOffset, 10);
       expect(state.hasPrevious, isTrue);
-      expect(state.items.first.name, 'pokemon-101'); // id 101 is now first
+      expect(state.items.first.name, 'pokemon-11');
     });
 
     test('no-op when hasMore is false', () async {
@@ -258,31 +266,30 @@ void main() {
     setUp(() async {
       container = _makeContainer(_MultiPageRepository());
       controller = container.read(pokemonSearchControllerProvider.notifier);
-      await controller.init();    // 0..99
-      await controller.loadMore(); // 0..199
-      await controller.loadMore(); // 0..299
-      await controller.loadMore(); // 100..399 (window shifted, start=100)
+      await controller.init(); // 1..100
+      await _loadMoreTimes(controller, 21); // 11..310 (window shifted, start=10)
     });
 
     tearDown(() => container.dispose());
 
-    test('setup: window at start=100, size=300', () {
+    test('setup: window at start=10, size=300', () {
       final s = container.read(pokemonSearchControllerProvider);
-      expect(s.windowStartOffset, 100);
+      expect(s.windowStartOffset, 10);
       expect(s.items.length, 300);
       expect(s.hasPrevious, isTrue);
     });
 
-    test('loadPrevious prepends page 0, drops trailing page', () async {
+    test('loadPrevious prepends the prior 10 items and drops the trailing 10',
+        () async {
       await controller.loadPrevious();
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      /// Window shifts back: now covers 0..299 again.
+      /// Window shifts back: now covers 1..300 again.
       expect(state.windowStartOffset, 0);
       expect(state.items.length, 300);
-      expect(state.hasPrevious, isFalse); // back at origin
-      expect(state.items.first.name, 'pokemon-1'); // starts from id 1
+      expect(state.hasPrevious, isFalse);
+      expect(state.items.first.name, 'pokemon-1');
     });
 
     test('loadPrevious no-op when at offset 0', () async {
@@ -377,15 +384,15 @@ void main() {
     });
 
     test('window does not slide during search', () async {
-      /// Load 4 pages during search — windowStartOffset should stay 0.
+      /// Load more during search — windowStartOffset should stay 0.
       final container2 = _makeContainer(_MultiPageRepository());
       addTearDown(container2.dispose);
       final ctrl2 =
           container2.read(pokemonSearchControllerProvider.notifier);
-      await ctrl2.init(); // page 0
+      await ctrl2.init(); // initial 100
 
       await ctrl2.search('pokemon'); // query active
-      /// Manually load 3 more pages while search is active.
+      /// Manually load more items while search is active.
       await ctrl2.loadMore();
       await ctrl2.loadMore();
       await ctrl2.loadMore();
@@ -421,10 +428,7 @@ void main() {
       await ctrl2.init(); // 100 raw
 
       await ctrl2.search('pokemon');
-      /// Load 3 more pages during search — raw window grows to 400.
-      await ctrl2.loadMore();
-      await ctrl2.loadMore();
-      await ctrl2.loadMore();
+      await _loadMoreTimes(ctrl2, 30); // raw window grows to 400 during search
 
       /// Clear search — window trimmed back to 300.
       await ctrl2.search('');

@@ -8,8 +8,11 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/poke
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/pokemon_repository.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 
-/// Number of Pokémon fetched per page.
-const _pageSize = 100;
+/// Number of Pokémon fetched on the first load.
+const _initialPageSize = 100;
+
+/// Number of Pokémon fetched on each subsequent pagination step.
+const _pageSize = 30;
 
 /// Maximum raw items kept in the window during browse mode.
 const _maxWindow = 300;
@@ -180,13 +183,14 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
   // ---------------------------------------------------------------------------
 
   Future<void> _doInit() async {
-    AppLogger.debug(_tag, 'init — loading first page (offset=0)');
+    AppLogger.debug(
+        _tag, 'init — loading first batch (limit=$_initialPageSize, offset=0)');
     _window.clear();
     _windowStartOffset = 0;
     state = PokemonSearchState.initial();
     try {
       final page =
-          await _repository.getPokemonList(limit: _pageSize, offset: 0);
+          await _repository.getPokemonList(limit: _initialPageSize, offset: 0);
       _window.addAll(page.items);
       AppLogger.info(_tag, 'init complete — ${_window.length} items loaded');
       state = state.copyWith(
