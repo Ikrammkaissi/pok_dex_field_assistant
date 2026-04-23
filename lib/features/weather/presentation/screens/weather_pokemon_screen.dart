@@ -9,6 +9,36 @@ import 'package:pok_dex_field_assistant/features/weather/data/models/weather_mod
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_providers.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
 
+/// Stable widget keys for [WeatherPokemonScreen] — used in widget tests.
+class WeatherScreenKeys {
+  /// Loading spinner shown while fetching weather and Pokémon.
+  static const loadingIndicator = Key('weather_loading');
+
+  /// ListView containing the Pokémon tiles.
+  static const pokemonList = Key('weather_pokemon_list');
+
+  /// Container shown when a fetch fails.
+  static const errorView = Key('weather_error_view');
+
+  /// Retry button inside the error view.
+  static const retryButton = Key('weather_retry_button');
+
+  /// Card showing temperature, windspeed, and suggested type.
+  static const weatherCard = Key('weather_card');
+
+  /// Latitude text field.
+  static const latField = Key('weather_lat_field');
+
+  /// Longitude text field.
+  static const lonField = Key('weather_lon_field');
+
+  /// Go button that applies manual coordinate input.
+  static const goButton = Key('weather_go_button');
+
+  /// Shuffle button in the AppBar that randomises coordinates.
+  static const shuffleButton = Key('weather_shuffle_button');
+}
+
 /// Root screen for weather-based Pokémon suggestions.
 /// Uses [ConsumerStatefulWidget] to manage the lat/lon [TextEditingController]s.
 class WeatherPokemonScreen extends ConsumerStatefulWidget {
@@ -125,6 +155,7 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
         actions: [
           /// Generates new random coordinates and re-fetches.
           IconButton(
+            key: WeatherScreenKeys.shuffleButton,
             icon: const Icon(Icons.shuffle),
             tooltip: 'Randomise location',
             onPressed: state.isLoading
@@ -212,6 +243,7 @@ class _CoordinateFields extends StatelessWidget {
 
           /// Apply button — submits the current field values.
           FilledButton(
+            key: WeatherScreenKeys.goButton,
             onPressed: isLoading ? null : onApply,
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -243,7 +275,13 @@ class _CoordTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    /// Key is derived from the label so lat and lon fields are uniquely addressable.
+    final key = label == 'Latitude'
+        ? WeatherScreenKeys.latField
+        : WeatherScreenKeys.lonField;
+
     return TextField(
+      key: key,
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(
         signed: true,
@@ -283,12 +321,19 @@ class _WeatherContent extends StatelessWidget {
   Widget build(BuildContext context) {
     /// Full-screen spinner while fetching weather and Pokémon list.
     if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        key: WeatherScreenKeys.loadingIndicator,
+        child: CircularProgressIndicator(),
+      );
     }
 
     /// Full-screen error view with retry button.
     if (state.error != null) {
-      return _ErrorView(message: state.error!, onRetry: onRetry);
+      return _ErrorView(
+        key: WeatherScreenKeys.errorView,
+        message: state.error!,
+        onRetry: onRetry,
+      );
     }
 
     final weather = state.weather;
@@ -301,7 +346,7 @@ class _WeatherContent extends StatelessWidget {
     return Column(
       children: [
         /// Weather summary card showing conditions and suggested type.
-        _WeatherCard(weather: weather),
+        _WeatherCard(key: WeatherScreenKeys.weatherCard, weather: weather),
 
         /// Pokémon list takes remaining vertical space.
         Expanded(
@@ -309,6 +354,7 @@ class _WeatherContent extends StatelessWidget {
               ? const Center(
                   child: Text('No Pokémon found for this weather.'))
               : ListView.builder(
+                  key: WeatherScreenKeys.pokemonList,
                   controller: scrollController,
                   padding: const EdgeInsets.only(bottom: 16),
                   /// Extra slot at end for the bottom loading spinner.
@@ -336,7 +382,7 @@ class _WeatherCard extends StatelessWidget {
   /// Weather snapshot to display.
   final WeatherData weather;
 
-  const _WeatherCard({required this.weather});
+  const _WeatherCard({super.key, required this.weather});
 
   @override
   Widget build(BuildContext context) {
@@ -417,7 +463,7 @@ class _ErrorView extends StatelessWidget {
   /// Called when the user taps Retry.
   final VoidCallback onRetry;
 
-  const _ErrorView({required this.message, required this.onRetry});
+  const _ErrorView({super.key, required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -437,6 +483,7 @@ class _ErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
+              key: WeatherScreenKeys.retryButton,
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
