@@ -264,22 +264,27 @@ Riverpod 2.x deprecated `StateNotifier`. All three controllers (`PokemonSearchCo
 **2. Eliminate the remaining N+1**
 `primaryType` requires a detail fetch per list item. The PokéAPI list endpoint doesn't return type data. Fix options: pre-fetch types in batch (speculative), or cache detail responses so revisiting a Pokémon is free.
 
-**3. Persistent image cache size limit**
+**3. In-memory summary cache in `PokemonRepositoryImpl`**
+The sliding window drops old pages from memory when the user scrolls far enough. Scrolling back re-fetches those pages, firing the full N+1 batch again. Adding a `Map<String, PokemonSummary>` inside `PokemonRepositoryImpl` would make re-entering a dropped window page a cache hit with zero network calls, since PokéAPI Pokémon data is effectively static within a session.
+
+Trade-offs to be aware of: the map grows unboundedly within a session (acceptable for ~1000 items, roughly 100 KB); it only helps on the *second* visit to a page, not the initial load; and it introduces mutable state into what is otherwise a pure data-fetching class. For true offline resilience the cache should be persisted to disk (see item 5 below), but an in-memory map is a low-risk first step.
+
+**4. Persistent image cache size limit**
 `cached_network_image` caches to disk without a configured size cap. On devices with limited storage and large Pokédex exploration sessions, the cache can grow unboundedly. Would add a `CacheManager` with a max-size policy.
 
-**4. Offline mode**
+**5. Offline mode**
 Bookmarks persist locally but browsing requires a network connection. Would add a local SQLite or Hive store for previously fetched Pokémon, with a staleness policy so cached data refreshes in the background.
 
-**5. Full widget test coverage for SearchScreen and DetailScreen**
+**6. Full widget test coverage for SearchScreen and DetailScreen**
 `SearchScreen` has a smoke test but no coverage for pagination triggers, window-slide scroll-jump behaviour, or search debounce. `DetailScreen` tests cover happy-path render but not the moves table or shiny toggle.
 
-**6. Accessibility**
+**7. Accessibility**
 No `Semantics` labels on sprite images, stat bars, or type chips. Screen readers get widget-tree defaults which are not meaningful for Pokémon data.
 
-**7. Localisation**
+**8. Localisation**
 All user-facing strings are hardcoded English. Would wire `flutter_localizations` + ARB files.
 
-**8. Dev / prod environment separation**
+**9. Dev / prod environment separation**
 No environment layer exists. API base URLs, log levels, and timeouts are hardcoded in source. Flutter's `--dart-define` mechanism requires no extra packages:
 
 ```bash
@@ -289,7 +294,7 @@ flutter build --dart-define=ENV=prod --dart-define=LOG_LEVEL=warning --release
 
 A single `AppEnv` class reads these at compile time, HTTP clients pull base URLs from it, and `AppLogger` respects the level. `.vscode/launch.json` launch configs let new devs pick an environment from a dropdown , no manual flags. Pointing `POKE_API_BASE` at a local mock server then enables fully offline development with zero source changes.
 
-**9. Design system : theme, typography, and tokens**
+**10. Design system : theme, typography, and tokens**
 The current theme is a single file ([`lib/app/theme.dart`](lib/app/theme.dart)) with one seed colour and no custom typography or spacing scale:
 
 ```dart
