@@ -1,5 +1,5 @@
 /// Unit tests for [PokemonSearchController].
-/// Uses hand-written fakes — no external mocking packages needed.
+/// Uses hand-written fakes , no external mocking packages needed.
 /// Tests state transitions in isolation from HTTP or Flutter widgets.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -184,7 +184,7 @@ Future<void> _loadMoreTimes(
 // ---------------------------------------------------------------------------
 
 void main() {
-  group('PokemonSearchController — init', () {
+  group('PokemonSearchController , init', () {
     test('initial state is loading with empty items', () async {
       final container = _makeContainer(_MultiPageRepository());
       addTearDown(container.dispose);
@@ -229,7 +229,7 @@ void main() {
     });
   });
 
-  group('PokemonSearchController — loadMore (window growth)', () {
+  group('PokemonSearchController , loadMore (window growth)', () {
     late ProviderContainer container;
     late PokemonSearchController controller;
 
@@ -263,20 +263,21 @@ void main() {
       expect(state.windowStartOffset, 0);
     });
 
-    test('7th incremental load drops the leading 30 items and shifts start',
+    test('3rd incremental load drops the leading 30 items and shifts start',
         () async {
-      await _loadMoreTimes(controller, 7);
+      // 100 + 3×30 = 190 > _maxWindow(180) → drop leading 30 → 160 items, start=30
+      await _loadMoreTimes(controller, 3);
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      expect(state.items.length, 280);
+      expect(state.items.length, 160);
       expect(state.windowStartOffset, 30);
       expect(state.hasPrevious, isTrue);
       expect(state.items.first.name, 'pokemon-31');
     });
 
     test('no-op when hasMore is false', () async {
-      /// 3-item repo — one page, no more.
+      /// 3-item repo , one page, no more.
       final container2 =
           _makeContainer(_FlatRepository(_fakeItems(1, 3)));
       addTearDown(container2.dispose);
@@ -297,7 +298,7 @@ void main() {
     });
   });
 
-  group('PokemonSearchController — loadPrevious (window shift back)', () {
+  group('PokemonSearchController , loadPrevious (window shift back)', () {
     late ProviderContainer container;
     late PokemonSearchController controller;
 
@@ -305,27 +306,27 @@ void main() {
       container = _makeContainer(_MultiPageRepository());
       controller = container.read(pokemonSearchControllerProvider.notifier);
       await controller.init(); // 1..100
-      await _loadMoreTimes(controller, 7); // 31..310 (window shifted, start=30)
+      await _loadMoreTimes(controller, 3); // 100+3×30=190>180 → drop30 → 160 items, start=30
     });
 
     tearDown(() => container.dispose());
 
-    test('setup: window at start=30, size=280', () {
+    test('setup: window at start=30, size=160', () {
       final s = container.read(pokemonSearchControllerProvider);
       expect(s.windowStartOffset, 30);
-      expect(s.items.length, 280);
+      expect(s.items.length, 160);
       expect(s.hasPrevious, isTrue);
     });
 
-    test('loadPrevious prepends the prior 30 items and drops the trailing 30',
+    test('loadPrevious prepends the prior 30 items and drops trailing to cap',
         () async {
       await controller.loadPrevious();
 
       final state = container.read(pokemonSearchControllerProvider);
 
-      /// Window shifts back to offset 0 and expands back to 300 items.
+      // Prepend 30 → 190 items; 190>180 → removeRange(180,190) → 180 items, start=0.
       expect(state.windowStartOffset, 0);
-      expect(state.items.length, 300);
+      expect(state.items.length, 180);
       expect(state.hasPrevious, isFalse);
       expect(state.items.first.name, 'pokemon-1');
     });
@@ -344,7 +345,7 @@ void main() {
     });
   });
 
-  group('PokemonSearchController — search', () {
+  group('PokemonSearchController , search', () {
     late ProviderContainer container;
     late PokemonSearchController controller;
 
@@ -423,7 +424,7 @@ void main() {
     });
   });
 
-  group('PokemonSearchController — search + pagination', () {
+  group('PokemonSearchController , search + pagination', () {
     test(
         'loadMore during search keeps fetching until a new matching item appears',
         () async {
@@ -471,7 +472,7 @@ void main() {
     });
 
     test('window does not slide during search', () async {
-      /// Load more during search — windowStartOffset should stay 0.
+      /// Load more during search , windowStartOffset should stay 0.
       final container2 = _makeContainer(_MultiPageRepository());
       addTearDown(container2.dispose);
       final ctrl2 =
@@ -485,7 +486,7 @@ void main() {
       await ctrl2.loadMore();
 
       final state = container2.read(pokemonSearchControllerProvider);
-      /// Window must NOT have slid — offset stays at 0 during search.
+      /// Window must NOT have slid , offset stays at 0 during search.
       expect(state.windowStartOffset, 0);
     });
 
@@ -496,7 +497,7 @@ void main() {
           container2.read(pokemonSearchControllerProvider.notifier);
       await ctrl2.init();
 
-      /// Page 0 has 5 "rare" items — below threshold of 20.
+      /// Page 0 has 5 "rare" items , below threshold of 20.
       /// Auto-fetch should trigger and load page 1 (18 more) → total 23.
       await ctrl2.search('rare');
 
@@ -517,7 +518,7 @@ void main() {
       await ctrl2.search('pokemon');
       await _loadMoreTimes(ctrl2, 30); // raw window grows to 400 during search
 
-      /// Clear search — browse mode is fetched again from offset 0.
+      /// Clear search , browse mode is fetched again from offset 0.
       await ctrl2.search('');
 
       final state = container2.read(pokemonSearchControllerProvider);
@@ -527,7 +528,7 @@ void main() {
     });
   });
 
-  group('PokemonSearchController — retry', () {
+  group('PokemonSearchController , retry', () {
     test('retry after error resets and reloads', () async {
       final container = _makeContainer(_ErrorRepository());
       addTearDown(container.dispose);
@@ -546,7 +547,7 @@ void main() {
     });
   });
 
-  group('PokemonSearchController — error messages', () {
+  group('PokemonSearchController , error messages', () {
     test('NetworkException maps to correct message', () async {
       final container = _makeContainer(_ErrorRepository());
       addTearDown(container.dispose);

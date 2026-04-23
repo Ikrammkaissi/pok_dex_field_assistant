@@ -3,8 +3,19 @@
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/weather/data/models/weather_models.dart';
 
+/// Sentinel object used by [WeatherState.copyWith] to distinguish
+/// "caller did not pass error" from "caller explicitly passed null to clear it".
+/// Using `Object()` as a default prevents the nullable [String?] parameter from
+/// silently wiping the previous error on every [copyWith] call that omits it.
+const _keep = _Sentinel();
+
+/// Private sentinel type , not exported; used only for [_keep].
+class _Sentinel {
+  const _Sentinel();
+}
+
 /// Holds all UI-relevant state for the weather Pokémon suggestion flow.
-/// All fields are immutable — use [copyWith] to produce updated copies.
+/// All fields are immutable , use [copyWith] to produce updated copies.
 class WeatherState {
   /// True while the weather or Pokémon list is being fetched.
   final bool isLoading;
@@ -12,10 +23,10 @@ class WeatherState {
   /// Non-null when the last fetch failed; contains a human-readable message.
   final String? error;
 
-  /// Current weather snapshot — null until the first successful fetch.
+  /// Current weather snapshot , null until the first successful fetch.
   final WeatherData? weather;
 
-  /// Currently visible Pokémon slice — grows as user loads more pages.
+  /// Currently visible Pokémon slice , grows as user loads more pages.
   final List<PokemonSummary> pokemon;
 
   /// True when more Pokémon remain in the full type list beyond [pokemon].
@@ -43,10 +54,22 @@ class WeatherState {
   });
 
   /// Returns a copy of this state with the given fields overridden.
-  /// Passing `error: null` explicitly clears a previous error.
+  ///
+  /// The [error] parameter uses a sentinel default ([_keep]) so that callers
+  /// who do not pass [error] preserve the existing value.
+  /// Pass `error: null` explicitly to clear a previous error.
+  ///
+  /// Example , preserve error while setting isLoadingMore:
+  /// ```dart
+  /// state = state.copyWith(isLoadingMore: true); // error unchanged
+  /// ```
+  /// Example , clear error on success:
+  /// ```dart
+  /// state = state.copyWith(error: null, pokemon: items);
+  /// ```
   WeatherState copyWith({
     bool? isLoading,
-    String? error,
+    Object? error = _keep,  // sentinel: omitting preserves current value
     WeatherData? weather,
     List<PokemonSummary>? pokemon,
     bool? hasMore,
@@ -56,8 +79,8 @@ class WeatherState {
   }) {
     return WeatherState(
       isLoading: isLoading ?? this.isLoading,
-      /// `error` is intentionally not defaulted — caller must pass null to clear it.
-      error: error,
+      /// Preserve current error when sentinel is passed; otherwise use new value.
+      error: error == _keep ? this.error : error as String?,
       weather: weather ?? this.weather,
       pokemon: pokemon ?? this.pokemon,
       hasMore: hasMore ?? this.hasMore,

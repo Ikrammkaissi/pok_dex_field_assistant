@@ -1,5 +1,5 @@
 /// Unit tests for [WeatherData].
-/// Pure logic — no network, no Riverpod, no Flutter widgets.
+/// Pure logic , no network, no Riverpod, no Flutter widgets.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 import 'package:pok_dex_field_assistant/features/weather/data/models/weather_models.dart';
@@ -288,14 +288,14 @@ void main() {
       expect(data.suggestedPokemonType, 'ice');
     });
 
-    test('weathercode priority beats temperature — rain code with hot temp', () {
+    test('weathercode priority beats temperature , rain code with hot temp', () {
       /// Drizzle code 55 should yield water even though temperature is 35°C.
       final data = WeatherData.fromJson(
           _weatherJson(weathercode: 55, windspeed: 5.0, temperature: 35.0));
       expect(data.suggestedPokemonType, 'water');
     });
 
-    test('weathercode priority beats wind — thunderstorm with high wind', () {
+    test('weathercode priority beats wind , thunderstorm with high wind', () {
       /// Code 95 beats windspeed > 30.
       final data = WeatherData.fromJson(
           _weatherJson(weathercode: 95, windspeed: 40.0, temperature: 20.0));

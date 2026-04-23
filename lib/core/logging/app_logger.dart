@@ -2,17 +2,17 @@
 ///
 /// ## Design decisions
 ///
-/// **Static API with a tag parameter** — `AppLogger.debug('HttpClient', 'msg')`
+/// **Static API with a tag parameter** , `AppLogger.debug('HttpClient', 'msg')`
 /// Tags make it easy to grep logs by layer without injecting a logger instance
 /// into every class. No DI wiring needed.
 ///
-/// **Wraps `logger` package** — decouples the rest of the codebase from the
+/// **Wraps `logger` package** , decouples the rest of the codebase from the
 /// package. If we swap the package later, only this file changes.
 ///
-/// **Build-mode aware** — `kDebugMode` switches between pretty console output
+/// **Build-mode aware** , `kDebugMode` switches between pretty console output
 /// (debug) and silent / warning-only output (release). No manual flags needed.
 ///
-/// **`MultiOutput` for extensibility** — adding a remote sink (Sentry,
+/// **`MultiOutput` for extensibility** , adding a remote sink (Sentry,
 /// Firebase Crashlytics, Datadog) requires only adding one line inside
 /// [_buildOutput]. Nothing else in the codebase changes.
 ///
@@ -36,7 +36,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 
-/// App-wide logger. Call static methods from any layer — no instance needed.
+/// App-wide logger. Call static methods from any layer , no instance needed.
 ///
 /// Usage:
 /// ```dart
@@ -44,7 +44,7 @@ import 'package:logger/logger.dart';
 /// AppLogger.error('SearchController', 'init failed', error: e, stackTrace: s);
 /// ```
 class AppLogger {
-  /// Private singleton [Logger] — configured once at startup.
+  /// Private singleton [Logger] , configured once at startup.
   static final Logger _logger = Logger(
     /// Simple single-line output.
     printer: SimplePrinter(colors: true),
@@ -66,7 +66,7 @@ class AppLogger {
     ]);
   }
 
-  // Prevent instantiation — all members are static.
+  // Prevent instantiation , all members are static.
   AppLogger._();
 
   /// Logs a [message] at debug level under [tag].

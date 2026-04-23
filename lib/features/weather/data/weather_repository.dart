@@ -1,5 +1,5 @@
 /// Abstract contract and concrete implementation for weather-based Pokémon suggestions.
-/// [WeatherRepository] is the interface callers depend on — swap impl in tests.
+/// [WeatherRepository] is the interface callers depend on , swap impl in tests.
 /// [WeatherRepositoryImpl] uses [WeatherHttpClient] for weather and [PokeApiHttpClient]
 /// for the type endpoint, building [PokemonSummary] without N+1 detail calls.
 import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
@@ -19,25 +19,25 @@ abstract class WeatherRepository {
   });
 
   /// Returns all [PokemonSummary] items of the given [typeName].
-  /// Uses the PokéAPI `/type/{name}` endpoint — no extra detail calls needed.
+  /// Uses the PokéAPI `/type/{name}` endpoint , no extra detail calls needed.
   Future<List<PokemonSummary>> getPokemonByType(String typeName);
 }
 
 /// Implements [WeatherRepository] using open-meteo and PokéAPI.
 /// Builds [PokemonSummary] from the type endpoint response by extracting the
-/// Pokémon ID from the URL and constructing a sprite URL directly — zero N+1 calls.
+/// Pokémon ID from the URL and constructing a sprite URL directly , zero N+1 calls.
 class WeatherRepositoryImpl implements WeatherRepository {
   /// Logger tag for this class.
   static const _tag = 'WeatherRepository';
 
-  /// Base URL for raw PokeAPI sprites — used to build sprite URLs from IDs.
+  /// Base URL for raw PokeAPI sprites , used to build sprite URLs from IDs.
   static const _spriteBase =
       'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
 
-  /// HTTP client for open-meteo weather calls — injected for testability.
+  /// HTTP client for open-meteo weather calls , injected for testability.
   final WeatherHttpClient _weatherClient;
 
-  /// HTTP client for PokéAPI type calls — injected for testability.
+  /// HTTP client for PokéAPI type calls , injected for testability.
   final PokeApiHttpClient _pokeClient;
 
   /// Creates a [WeatherRepositoryImpl] backed by the two HTTP clients.
@@ -50,7 +50,7 @@ class WeatherRepositoryImpl implements WeatherRepository {
     required double lat,
     required double lon,
   }) async {
-    AppLogger.info(_tag, 'Fetching weather — lat=$lat lon=$lon');
+    AppLogger.info(_tag, 'Fetching weather , lat=$lat lon=$lon');
     try {
       /// open-meteo path includes query params directly in the path string.
       final json = await _weatherClient
@@ -72,7 +72,7 @@ class WeatherRepositoryImpl implements WeatherRepository {
   /// - Construct [PokemonSummary] with no additional network calls.
   @override
   Future<List<PokemonSummary>> getPokemonByType(String typeName) async {
-    AppLogger.info(_tag, 'Fetching type "$typeName" Pokémon — all');
+    AppLogger.info(_tag, 'Fetching type "$typeName" Pokémon , all');
     try {
       /// Fetch the type detail which includes a full pokemon list.
       final json = await _pokeClient.get('/type/$typeName');
@@ -82,7 +82,7 @@ class WeatherRepositoryImpl implements WeatherRepository {
 
       /// Build summaries for all entries without extra calls.
       final summaries = pokemonList
-          .map((entry) {
+          .map<PokemonSummary?>((entry) {
             /// Each entry wraps the pokemon under a `pokemon` key.
             final data =
                 (entry as Map<String, dynamic>)['pokemon'] as Map<String, dynamic>;
@@ -90,13 +90,20 @@ class WeatherRepositoryImpl implements WeatherRepository {
             /// Lowercase hyphenated name from the type endpoint.
             final name = data['name'] as String;
 
-            /// URL like "https://pokeapi.co/api/v2/pokemon/16/" — extract id.
+            /// URL like "https://pokeapi.co/api/v2/pokemon/16/" , extract id.
             final url = data['url'] as String;
 
             /// Split on `/`, drop empties, take the last segment as the id string.
             final idStr =
                 url.split('/').where((s) => s.isNotEmpty).last;
-            final id = int.parse(idStr);
+            final id = int.tryParse(idStr);
+            if (id == null) {
+              AppLogger.warning(
+                _tag,
+                'Skipping entry with non-numeric pokemon ID: $idStr',
+              );
+              return null;
+            }
 
             /// Construct sprite URL from the known GitHub raw sprites path.
             final spriteUrl = '$_spriteBase/$id.png';
@@ -108,6 +115,7 @@ class WeatherRepositoryImpl implements WeatherRepository {
               primaryType: typeName,
             );
           })
+          .whereType<PokemonSummary>()
           .toList();
 
       AppLogger.info(_tag,

@@ -3,6 +3,8 @@
 /// empty state, and a windowed list (max 300 items) that loads more on scroll
 /// in both directions and discards out-of-window pages.
 /// All data logic lives in [PokemonSearchController]; this file is pure UI.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +16,16 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/pro
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/widgets/pokemon_list_tile.dart';
 
-/// Root search screen widget — reads [pokemonSearchControllerProvider].
+/// Stable widget keys for [SearchScreen] , used in widget tests.
+class SearchScreenKeys {
+  static const searchBar = Key('search_bar');
+  static const pokemonList = Key('search_pokemon_list');
+  static const emptyView = Key('search_empty_view');
+  static const errorView = Key('search_error_view');
+  static const retryButton = Key('search_retry_button');
+}
+
+/// Root search screen widget , reads [pokemonSearchControllerProvider].
 /// Uses [ConsumerStatefulWidget] to manage the [TextEditingController] and
 /// [ScrollController] lifecycles.
 class SearchScreen extends ConsumerStatefulWidget {
@@ -32,6 +43,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   /// Attached to the list to detect scroll position for pagination.
   late final ScrollController _scrollController;
 
+  /// Debounce timer , cancelled and restarted on every keystroke so the
+  /// controller's search() is only called 300ms after the user stops typing.
+  /// Without this, each character fires getPokemonList(limit:100) which spawns
+  /// up to 100 concurrent detail requests per keystroke.
+  Timer? _searchDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -41,24 +58,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   /// Triggers forward or backward page loads based on scroll proximity to
   /// the list edges.
+  ///
+  /// Uses a threshold of 80px rather than exact `== 0` comparison because
+  /// Flutter's scroll physics produce fractional pixel extents that may never
+  /// equal exactly zero, silently preventing pagination from triggering.
+  /// [loadMore] and [loadPrevious] are both no-ops while a load is in flight
+  /// so multiple triggers during a slow deceleration are safe.
   void _onScroll() {
     final pos = _scrollController.position;
     final controller =
         ref.read(pokemonSearchControllerProvider.notifier);
 
-    /// Exact bottom edge -> load next page.
-    if (pos.extentAfter == 0) {
+    /// Within 80px of the bottom edge → load next page.
+    if (pos.extentAfter < 80) {
       controller.loadMore();
     }
 
-    /// Exact top edge -> load previous page.
-    if (pos.extentBefore == 0) {
+    /// Within 80px of the top edge → load previous page.
+    if (pos.extentBefore < 80) {
       controller.loadPrevious();
     }
   }
 
+  /// Debounces search input , cancels pending timer and starts a new 300ms one.
+  /// Only calls controller.search() after the user stops typing for 300ms,
+  /// preventing up to 100 concurrent HTTP requests per keystroke.
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      ref.read(pokemonSearchControllerProvider.notifier).search(query);
+    });
+  }
+
   @override
   void dispose() {
+    /// Cancel any pending debounce timer to avoid calling search() after unmount.
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -118,7 +153,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         children: [
           _SearchBar(
             controller: _searchController,
-            onChanged: controller.search,
+            /// Use debounced handler , prevents N concurrent requests per keystroke.
+            onChanged: _onSearchChanged,
           ),
           Expanded(
             child: _Content(
@@ -142,13 +178,18 @@ class _SearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
 
-  const _SearchBar({required this.controller, required this.onChanged});
+  const _SearchBar({
+    super.key,
+    required this.controller,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: TextField(
+        key: SearchScreenKeys.searchBar,
         controller: controller,
         onChanged: onChanged,
         decoration: InputDecoration(
@@ -185,6 +226,7 @@ class _Content extends StatelessWidget {
   final VoidCallback onRetry;
 
   const _Content({
+    super.key,
     required this.state,
     required this.scrollController,
     required this.onRetry,
@@ -210,6 +252,7 @@ class _Content extends StatelessWidget {
     final total = topSlot + state.items.length + bottomSlot;
 
     return ListView.builder(
+      key: SearchScreenKeys.pokemonList,
       controller: scrollController,
       padding: const EdgeInsets.only(bottom: 16),
       itemCount: total,
@@ -232,7 +275,10 @@ class _Content extends StatelessWidget {
           );
         }
 
-        return PokemonListTile(item: state.items[itemIndex]);
+        /// RepaintBoundary isolates per-tile repaints from scroll-driven invalidations.
+        return RepaintBoundary(
+          child: PokemonListTile(item: state.items[itemIndex]),
+        );
       },
     );
   }
@@ -243,11 +289,16 @@ class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const _ErrorView({required this.message, required this.onRetry});
+  const _ErrorView({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Center(
+      key: SearchScreenKeys.errorView,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -262,6 +313,7 @@ class _ErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
+              key: SearchScreenKeys.retryButton,
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
@@ -277,11 +329,11 @@ class _ErrorView extends StatelessWidget {
 /// Shows a count badge when at least one Pokémon is bookmarked.
 class _BookmarkNavButton extends ConsumerWidget {
   /// Creates a [_BookmarkNavButton].
-  const _BookmarkNavButton();
+  const _BookmarkNavButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    /// Watch bookmark count — rebuilds only when the list length changes.
+    /// Watch bookmark count , rebuilds only when the list length changes.
     final count = ref.watch(bookmarkNotifierProvider).length;
 
     return Stack(
@@ -326,7 +378,7 @@ class _BookmarkNavButton extends ConsumerWidget {
 class _EmptyView extends StatelessWidget {
   final String query;
 
-  const _EmptyView({required this.query});
+  const _EmptyView({super.key, required this.query});
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +387,7 @@ class _EmptyView extends StatelessWidget {
         : 'No results for "$query".';
 
     return Center(
+      key: SearchScreenKeys.emptyView,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -1,5 +1,5 @@
 /// Immutable state for the Pokémon search screen.
-/// All mutations go through [PokemonSearchController] — never mutated in place.
+/// All mutations go through [PokemonSearchController] , never mutated in place.
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
 /// Represents every possible state the search screen can be in.
@@ -19,7 +19,7 @@ class PokemonSearchState {
   /// Non-null when the last operation failed; null on success.
   final String? error;
 
-  /// The current search query — empty string means "show all".
+  /// The current search query , empty string means "show all".
   final String query;
 
   /// API offset of the first item currently in the window.

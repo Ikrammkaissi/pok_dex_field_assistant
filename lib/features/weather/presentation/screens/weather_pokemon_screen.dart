@@ -9,7 +9,7 @@ import 'package:pok_dex_field_assistant/features/weather/data/models/weather_mod
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_providers.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
 
-/// Stable widget keys for [WeatherPokemonScreen] — used in widget tests.
+/// Stable widget keys for [WeatherPokemonScreen] , used in widget tests.
 class WeatherScreenKeys {
   /// Loading spinner shown while fetching weather and Pokémon.
   static const loadingIndicator = Key('weather_loading');
@@ -75,8 +75,12 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
   }
 
   /// Triggers [WeatherController.loadMore] when the user reaches the list bottom.
+  ///
+  /// Uses a threshold of 80px rather than exact `== 0` comparison , Flutter
+  /// scroll physics produce fractional extents that may never equal zero exactly,
+  /// silently preventing pagination. [loadMore] guards against concurrent calls.
   void _onScroll() {
-    if (_scrollController.position.extentAfter == 0) {
+    if (_scrollController.position.extentAfter < 80) {
       ref.read(weatherControllerProvider.notifier).loadMore();
     }
   }
@@ -92,7 +96,7 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
   /// Syncs text fields to new coordinates from state when they differ.
   /// Called in [build] so the fields reflect randomly generated coords on first load.
   void _syncFields(double lat, double lon) {
-    /// Only update when coords have actually changed — prevents cursor jumping while editing.
+    /// Only update when coords have actually changed , prevents cursor jumping while editing.
     if (lat != _syncedLat) {
       _syncedLat = lat;
       _latController.text = lat.toStringAsFixed(4);
@@ -103,39 +107,16 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
     }
   }
 
-  /// Parses the text fields and triggers a fetch with the new coordinates.
-  /// Shows a SnackBar if either value is not a valid number.
-  void _applyCoordinates(BuildContext context) {
-    final lat = double.tryParse(_latController.text.trim());
-    final lon = double.tryParse(_lonController.text.trim());
-
-    /// Validate both fields before fetching.
-    if (lat == null || lon == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter valid numbers for lat and lon.')),
-      );
-      return;
-    }
-
-    /// Validate range.
-    if (lat < -90 || lat > 90) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Latitude must be between −90 and 90.')),
-      );
-      return;
-    }
-    if (lon < -180 || lon > 180) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Longitude must be between −180 and 180.')),
-      );
-      return;
-    }
-
-    /// Dismiss keyboard and trigger fetch with the parsed values.
+  /// Triggers coordinate-based fetch using raw text values.
+  void _applyCoordinates() {
+    /// Dismiss keyboard and let the controller validate and parse inputs.
     FocusScope.of(context).unfocus();
     ref
         .read(weatherControllerProvider.notifier)
-        .fetchWeatherSuggestions(lat: lat, lon: lon);
+        .fetchWeatherSuggestions(
+          rawLat: _latController.text,
+          rawLon: _lonController.text,
+        );
   }
 
   @override
@@ -166,12 +147,12 @@ class _WeatherPokemonScreenState extends ConsumerState<WeatherPokemonScreen> {
       ),
       body: Column(
         children: [
-          /// Editable coordinate fields — allow manual location override.
+          /// Editable coordinate fields , allow manual location override.
           _CoordinateFields(
             latController: _latController,
             lonController: _lonController,
             isLoading: state.isLoading,
-            onApply: () => _applyCoordinates(context),
+            onApply: _applyCoordinates,
           ),
 
           /// Weather info + Pokémon list fills the remaining space.
@@ -207,6 +188,7 @@ class _CoordinateFields extends StatelessWidget {
   final VoidCallback onApply;
 
   const _CoordinateFields({
+    super.key,
     required this.latController,
     required this.lonController,
     required this.isLoading,
@@ -219,10 +201,11 @@ class _CoordinateFields extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Row(
         children: [
-          /// Latitude field — takes up ~40% of the row.
+          /// Latitude field , takes up ~40% of the row.
           Expanded(
             flex: 4,
             child: _CoordTextField(
+              fieldKey: WeatherScreenKeys.latField,
               controller: latController,
               label: 'Latitude',
               onSubmitted: (_) => onApply(),
@@ -230,10 +213,11 @@ class _CoordinateFields extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          /// Longitude field — takes up ~40% of the row.
+          /// Longitude field , takes up ~40% of the row.
           Expanded(
             flex: 4,
             child: _CoordTextField(
+              fieldKey: WeatherScreenKeys.lonField,
               controller: lonController,
               label: 'Longitude',
               onSubmitted: (_) => onApply(),
@@ -241,7 +225,7 @@ class _CoordinateFields extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          /// Apply button — submits the current field values.
+          /// Apply button , submits the current field values.
           FilledButton(
             key: WeatherScreenKeys.goButton,
             onPressed: isLoading ? null : onApply,
@@ -258,6 +242,9 @@ class _CoordinateFields extends StatelessWidget {
 
 /// Single coordinate text field for numeric lat or lon input.
 class _CoordTextField extends StatelessWidget {
+  /// Stable key for this specific coordinate input field.
+  final Key fieldKey;
+
   /// Controller shared with the parent so values can be read on apply.
   final TextEditingController controller;
 
@@ -268,6 +255,8 @@ class _CoordTextField extends StatelessWidget {
   final ValueChanged<String> onSubmitted;
 
   const _CoordTextField({
+    super.key,
+    required this.fieldKey,
     required this.controller,
     required this.label,
     required this.onSubmitted,
@@ -275,13 +264,8 @@ class _CoordTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    /// Key is derived from the label so lat and lon fields are uniquely addressable.
-    final key = label == 'Latitude'
-        ? WeatherScreenKeys.latField
-        : WeatherScreenKeys.lonField;
-
     return TextField(
-      key: key,
+      key: fieldKey,
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(
         signed: true,
@@ -312,6 +296,7 @@ class _WeatherContent extends StatelessWidget {
   final VoidCallback onRetry;
 
   const _WeatherContent({
+    super.key,
     required this.state,
     required this.scrollController,
     required this.onRetry,
@@ -338,7 +323,7 @@ class _WeatherContent extends StatelessWidget {
 
     final weather = state.weather;
 
-    /// Fallback — shown briefly before the first auto-fetch completes.
+    /// Fallback , shown briefly before the first auto-fetch completes.
     if (weather == null) {
       return const Center(child: Text('Fetching weather…'));
     }
@@ -429,7 +414,7 @@ class _WeatherCard extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            /// Type suggestion row — chip highlights the mapped Pokémon type.
+            /// Type suggestion row , chip highlights the mapped Pokémon type.
             Row(
               children: [
                 Text('Suggested type:', style: theme.textTheme.bodyMedium),

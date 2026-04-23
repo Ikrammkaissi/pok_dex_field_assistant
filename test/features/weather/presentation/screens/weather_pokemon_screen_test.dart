@@ -114,7 +114,7 @@ void main() {
   // Loading state
   // -------------------------------------------------------------------------
 
-  group('WeatherPokemonScreen — loading state', () {
+  group('WeatherPokemonScreen , loading state', () {
     testWidgets('loading indicator visible while fetch in flight',
         (tester) async {
       final repo = _FakeWeatherRepository(
@@ -160,7 +160,7 @@ void main() {
   // Success state
   // -------------------------------------------------------------------------
 
-  group('WeatherPokemonScreen — success state', () {
+  group('WeatherPokemonScreen , success state', () {
     testWidgets('loading indicator gone after fetch completes', (tester) async {
       final repo = _FakeWeatherRepository();
 
@@ -185,7 +185,7 @@ void main() {
       await tester.pumpWidget(_wrap(const WeatherPokemonScreen(), repo, prefs));
       await tester.pumpAndSettle();
 
-      /// _testWeather has 25.0°C — expect truncated display somewhere in card.
+      /// _testWeather has 25.0°C , expect truncated display somewhere in card.
       expect(find.textContaining('25.0'), findsWidgets);
     });
 
@@ -258,7 +258,7 @@ void main() {
   // Error state
   // -------------------------------------------------------------------------
 
-  group('WeatherPokemonScreen — error state', () {
+  group('WeatherPokemonScreen , error state', () {
     testWidgets('error view visible when fetch fails', (tester) async {
       final repo = _FakeWeatherRepository(
         weatherError: Exception('network down'),
@@ -336,7 +336,7 @@ void main() {
   // Coordinate fields
   // -------------------------------------------------------------------------
 
-  group('WeatherPokemonScreen — coordinate fields', () {
+  group('WeatherPokemonScreen , coordinate fields', () {
     testWidgets('lat field is visible', (tester) async {
       final repo = _FakeWeatherRepository();
 
@@ -380,7 +380,7 @@ void main() {
       expect(double.tryParse(text), isNotNull);
     });
 
-    testWidgets('invalid lat text shows SnackBar', (tester) async {
+    testWidgets('invalid lat text shows controller error view', (tester) async {
       final repo = _FakeWeatherRepository();
 
       await tester.pumpWidget(_wrap(const WeatherPokemonScreen(), repo, prefs));
@@ -389,12 +389,13 @@ void main() {
       /// Type non-numeric text into the lat field.
       await tester.enterText(find.byKey(WeatherScreenKeys.latField), 'abc');
       await tester.tap(find.byKey(WeatherScreenKeys.goButton));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byKey(WeatherScreenKeys.errorView), findsOneWidget);
+      expect(find.text('Enter valid numbers for lat and lon.'), findsOneWidget);
     });
 
-    testWidgets('out-of-range lat shows SnackBar', (tester) async {
+    testWidgets('out-of-range lat shows controller error view', (tester) async {
       final repo = _FakeWeatherRepository();
 
       await tester.pumpWidget(_wrap(const WeatherPokemonScreen(), repo, prefs));
@@ -402,12 +403,13 @@ void main() {
 
       await tester.enterText(find.byKey(WeatherScreenKeys.latField), '999');
       await tester.tap(find.byKey(WeatherScreenKeys.goButton));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byKey(WeatherScreenKeys.errorView), findsOneWidget);
+      expect(find.text('Latitude must be between -90 and 90.'), findsOneWidget);
     });
 
-    testWidgets('out-of-range lon shows SnackBar', (tester) async {
+    testWidgets('out-of-range lon shows controller error view', (tester) async {
       final repo = _FakeWeatherRepository();
 
       await tester.pumpWidget(_wrap(const WeatherPokemonScreen(), repo, prefs));
@@ -415,12 +417,13 @@ void main() {
 
       await tester.enterText(find.byKey(WeatherScreenKeys.lonField), '999');
       await tester.tap(find.byKey(WeatherScreenKeys.goButton));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byKey(WeatherScreenKeys.errorView), findsOneWidget);
+      expect(find.text('Longitude must be between -180 and 180.'), findsOneWidget);
     });
 
-    testWidgets('valid coords — Go button triggers fetch and shows results',
+    testWidgets('valid coords , Go button triggers fetch and shows results',
         (tester) async {
       final repo = _FakeWeatherRepository(pokemonResult: _dummyPokemon(2));
 
@@ -433,7 +436,7 @@ void main() {
       await tester.tap(find.byKey(WeatherScreenKeys.goButton));
       await tester.pumpAndSettle();
 
-      /// Results still visible — fetch succeeded with new coords.
+      /// Results still visible , fetch succeeded with new coords.
       expect(find.byKey(WeatherScreenKeys.weatherCard), findsOneWidget);
     });
   });
@@ -442,7 +445,7 @@ void main() {
   // Shuffle button
   // -------------------------------------------------------------------------
 
-  group('WeatherPokemonScreen — shuffle button', () {
+  group('WeatherPokemonScreen , shuffle button', () {
     testWidgets('shuffle button present in AppBar', (tester) async {
       final repo = _FakeWeatherRepository();
 

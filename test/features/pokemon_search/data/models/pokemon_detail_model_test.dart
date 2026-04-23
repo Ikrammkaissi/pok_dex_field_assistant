@@ -1,5 +1,5 @@
 /// Unit tests for [PokemonDetail.fromJson] and [MoveEntry.fromJson].
-/// All tests use static JSON maps — no network or Flutter dependencies.
+/// All tests use static JSON maps , no network or Flutter dependencies.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
@@ -52,8 +52,8 @@ final _validJson = <String, dynamic>{
     {'type': {'name': 'flying'}},
   ],
   'abilities': [
-    {'ability': {'name': 'blaze'}},
-    {'ability': {'name': 'solar-power'}},
+    {'ability': {'name': 'blaze'}, 'is_hidden': false},
+    {'ability': {'name': 'solar-power'}, 'is_hidden': true},
   ],
   'stats': [
     {'stat': {'name': 'hp'}, 'base_stat': 78},
@@ -95,7 +95,7 @@ void main() {
     });
 
     test('uses last version_group_details entry', () {
-      /// Two version entries — should pick the last one.
+      /// Two version entries , should pick the last one.
       final json = <String, dynamic>{
         'move': {'name': 'tackle', 'url': ''},
         'version_group_details': [
@@ -205,9 +205,10 @@ void main() {
       expect(PokemonDetail.fromJson(json).types, ['psychic']);
     });
 
-    test('parses abilities in slot order', () {
+    test('parses abilities in slot order with hidden flags', () {
       final model = PokemonDetail.fromJson(_validJson);
-      expect(model.abilities, ['blaze', 'solar-power']);
+      expect(model.abilities.map((a) => a.name), ['blaze', 'solar-power']);
+      expect(model.abilities.map((a) => a.isHidden), [false, true]);
     });
 
     test('parses stats map', () {

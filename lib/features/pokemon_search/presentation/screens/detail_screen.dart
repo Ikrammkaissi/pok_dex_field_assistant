@@ -1,14 +1,18 @@
-/// Full Pokémon detail screen — shown when a list tile is tapped.
+/// Full Pokémon detail screen , shown when a list tile is tapped.
 /// Fetches data via [pokemonDetailProvider] and renders stats, types,
 /// abilities, height, weight, and a large official artwork image.
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pok_dex_field_assistant/core/utils/display_name.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 
-/// Stat display labels — prettier than the raw API stat names.
+/// Stat display labels , prettier than the raw API stat names.
 const _statLabels = <String, String>{
   'hp': 'HP',
   'attack': 'Atk',
@@ -19,7 +23,7 @@ const _statLabels = <String, String>{
 };
 
 /// Detail screen for a single Pokémon identified by [pokemonName].
-/// Loaded via GoRouter path parameter — no data passed directly.
+/// Loaded via GoRouter path parameter , no data passed directly.
 class DetailScreen extends ConsumerWidget {
   /// Lowercase hyphenated Pokémon name used to fetch detail.
   final String pokemonName;
@@ -29,7 +33,7 @@ class DetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    /// Watch the async detail fetch — rebuilds on loading/data/error.
+    /// Watch the async detail fetch , rebuilds on loading/data/error.
     final detailAsync = ref.watch(pokemonDetailProvider(pokemonName));
 
     /// Watch per-pokemon bookmark state for the AppBar icon.
@@ -40,11 +44,11 @@ class DetailScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: const BackButton(),
         title: detailAsync.maybeWhen(
-          data: (d) => Text(_displayName(d.name)),
-          orElse: () => Text(_displayName(pokemonName)),
+          data: (d) => Text(toDisplayName(d.name)),
+          orElse: () => Text(toDisplayName(pokemonName)),
         ),
         actions: [
-          /// Bookmark toggle — only active once detail data is available
+          /// Bookmark toggle , only active once detail data is available
           /// so we have the id and spriteUrl needed to construct the summary.
           detailAsync.maybeWhen(
             data: (detail) => IconButton(
@@ -68,10 +72,10 @@ class DetailScreen extends ConsumerWidget {
         ],
       ),
       body: detailAsync.when(
-        /// Loading state — centred spinner.
+        /// Loading state , centred spinner.
         loading: () => const Center(child: CircularProgressIndicator()),
 
-        /// Error state — message and retry button.
+        /// Error state , message and retry button.
         error: (err, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -91,17 +95,12 @@ class DetailScreen extends ConsumerWidget {
           ),
         ),
 
-        /// Data state — full detail layout.
+        /// Data state , full detail layout.
         data: (detail) => _DetailBody(detail: detail),
       ),
     );
   }
 
-  /// Converts hyphenated API name to title-cased display name.
-  String _displayName(String name) => name
-      .split('-')
-      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-      .join(' ');
 }
 
 /// Scrollable body rendered once [PokemonDetail] is available.
@@ -111,7 +110,7 @@ class _DetailBody extends StatefulWidget {
   final PokemonDetail detail;
 
   /// Creates a [_DetailBody] for [detail].
-  const _DetailBody({required this.detail});
+  const _DetailBody({super.key, required this.detail});
 
   @override
   State<_DetailBody> createState() => _DetailBodyState();
@@ -156,14 +155,14 @@ class _DetailBodyState extends State<_DetailBody> {
           ),
           const SizedBox(height: 16),
 
-          /// Cry audio player — latest and legacy sounds.
+          /// Cry audio player , latest and legacy sounds.
           _CriesCard(
             latestUrl: detail.cryLatestUrl,
             legacyUrl: detail.cryLegacyUrl,
           ),
           const SizedBox(height: 16),
 
-          /// Sprite gallery — normal or shiny variants matching hero image mode.
+          /// Sprite gallery , normal or shiny variants matching hero image mode.
           _SpriteGallery(
             frontDefault: detail.spriteUrl,
             backDefault: detail.backSpriteUrl,
@@ -173,7 +172,7 @@ class _DetailBodyState extends State<_DetailBody> {
           ),
           const SizedBox(height: 16),
 
-          /// Abilities list — hidden ability flagged.
+          /// Abilities list , hidden ability flagged.
           _AbilitiesCard(abilities: detail.abilities),
           const SizedBox(height: 16),
 
@@ -206,6 +205,7 @@ class _HeroImage extends StatelessWidget {
 
   /// Creates a [_HeroImage] with shiny toggle support.
   const _HeroImage({
+    super.key,
     required this.url,
     required this.isShiny,
     required this.onToggleShiny,
@@ -218,23 +218,22 @@ class _HeroImage extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           SizedBox(
-            /// Fixed size — prominent but fits small phones.
+            /// Fixed size , prominent but fits small phones.
             width: 220,
             height: 220,
-            child: Image.network(
-              url,
+            child: CachedNetworkImage(
+              imageUrl: url,
               fit: BoxFit.contain,
               /// Spinner while downloading.
-              loadingBuilder: (ctx, child, progress) => progress == null
-                  ? child
-                  : const Center(child: CircularProgressIndicator()),
+              placeholder: (ctx, _) =>
+                  const Center(child: CircularProgressIndicator()),
               /// Pokéball icon if URL is empty or fails.
-              errorBuilder: (ctx, _, __) =>
+              errorWidget: (ctx, _, __) =>
                   const Center(child: Icon(Icons.catching_pokemon, size: 80)),
             ),
           ),
 
-          /// Shiny toggle — bottom-right corner of the image box.
+          /// Shiny toggle , bottom-right corner of the image box.
           Positioned(
             bottom: 0,
             right: 0,
@@ -268,14 +267,11 @@ class _Header extends StatelessWidget {
   final String name;
 
   /// Creates a [_Header] for Pokémon [id] and [name].
-  const _Header({required this.id, required this.name});
+  const _Header({super.key, required this.id, required this.name});
 
   @override
   Widget build(BuildContext context) {
-    final display = name
-        .split('-')
-        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-        .join(' ');
+    final display = toDisplayName(name);
 
     return Column(
       children: [
@@ -304,25 +300,24 @@ class _TypeChips extends StatelessWidget {
   final List<String> types;
 
   /// Creates [_TypeChips] for [types].
-  const _TypeChips({required this.types});
+  const _TypeChips({super.key, required this.types});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    /// Computed once per build , shared across all type chips in this row.
+    final labelStyle = TextStyle(
+      color: scheme.onSecondaryContainer,
+      fontWeight: FontWeight.bold,
+      fontSize: 12,
+    );
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: types.map((t) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Chip(
-            label: Text(
-              t.toUpperCase(),
-              style: TextStyle(
-                color: scheme.onSecondaryContainer,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
+            label: Text(t.toUpperCase(), style: labelStyle),
             backgroundColor: scheme.secondaryContainer,
             /// Remove default padding to keep chips compact.
             padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -336,10 +331,10 @@ class _TypeChips extends StatelessWidget {
 
 /// Four-column card: height, weight, base experience, and move count.
 class _PhysicalStats extends StatelessWidget {
-  /// Height in decimetres (PokéAPI unit — divide by 10 for metres).
+  /// Height in decimetres (PokéAPI unit , divide by 10 for metres).
   final int height;
 
-  /// Weight in hectograms (PokéAPI unit — divide by 10 for kg).
+  /// Weight in hectograms (PokéAPI unit , divide by 10 for kg).
   final int weight;
 
   /// Base experience awarded when this Pokémon is defeated in battle.
@@ -350,6 +345,7 @@ class _PhysicalStats extends StatelessWidget {
 
   /// Creates [_PhysicalStats] from raw PokéAPI values.
   const _PhysicalStats({
+    super.key,
     required this.height,
     required this.weight,
     required this.baseExperience,
@@ -378,14 +374,14 @@ class _PhysicalStats extends StatelessWidget {
               icon: Icons.monitor_weight_outlined,
             ),
             const VerticalDivider(width: 1),
-            /// Base XP — experience points gained by defeating this Pokémon.
+            /// Base XP , experience points gained by defeating this Pokémon.
             _StatItem(
               label: 'Base XP',
               value: '$baseExperience',
               icon: Icons.star_outline,
             ),
             const VerticalDivider(width: 1),
-            /// Move count — total learnable moves.
+            /// Move count , total learnable moves.
             _StatItem(
               label: 'Moves',
               value: '$moveCount',
@@ -411,6 +407,7 @@ class _StatItem extends StatelessWidget {
 
   /// Creates a [_StatItem] with [label], [value], and [icon].
   const _StatItem({
+    super.key,
     required this.label,
     required this.value,
     required this.icon,
@@ -438,8 +435,8 @@ class _StatItem extends StatelessWidget {
 
 /// Horizontal scrollable row of small sprite variants.
 /// Card with play buttons for the latest and legacy Pokémon cry audio.
-/// Stateful — owns [AudioPlayer] lifecycle and tracks playback state.
-class _CriesCard extends StatefulWidget {
+/// Stateful , tracks playback state while using an injected audio dependency.
+class _CriesCard extends ConsumerStatefulWidget {
   /// Latest cry OGG URL (modern games).
   final String latestUrl;
 
@@ -447,37 +444,53 @@ class _CriesCard extends StatefulWidget {
   final String legacyUrl;
 
   /// Creates [_CriesCard] for the given cry URLs.
-  const _CriesCard({required this.latestUrl, required this.legacyUrl});
+  const _CriesCard({
+    super.key,
+    required this.latestUrl,
+    required this.legacyUrl,
+  });
 
   @override
-  State<_CriesCard> createState() => _CriesCardState();
+  ConsumerState<_CriesCard> createState() => _CriesCardState();
 }
 
-class _CriesCardState extends State<_CriesCard> {
-  /// Single player — only one cry plays at a time.
-  final _player = AudioPlayer();
+class _CriesCardState extends ConsumerState<_CriesCard> {
 
   /// Which cry is currently playing: 'latest', 'legacy', or null.
   String? _playing;
 
+  /// Subscription to [_player.onPlayerComplete].
+  /// Cancelled before every new play and in [dispose] to prevent listener
+  /// accumulation , each [_toggle] call used to add a new listener without
+  /// removing the old one, causing a memory leak and multiple setState calls
+  /// per completion event.
+  StreamSubscription<void>? _completeSub;
+
   @override
   void dispose() {
-    /// Release native audio resources when widget leaves the tree.
-    _player.dispose();
+    /// Cancel completion listener before releasing the player.
+    _completeSub?.cancel();
     super.dispose();
   }
 
   /// Plays [url] tagged by [key]; stops if already playing same key.
+  /// Cancels any previous [onPlayerComplete] subscription before registering
+  /// a new one so only one listener exists at any time.
   Future<void> _toggle(String key, String url) async {
+    final player = ref.read(audioPlayerProvider);
+    /// Always cancel before any state change to avoid stale listener firing.
+    _completeSub?.cancel();
+    _completeSub = null;
+
     if (_playing == key) {
-      await _player.stop();
+      await player.stop();
       setState(() => _playing = null);
     } else {
-      await _player.stop();
-      await _player.play(UrlSource(url));
+      await player.stop();
+      await player.play(UrlSource(url));
       setState(() => _playing = key);
-      /// Reset playing state when audio finishes naturally.
-      _player.onPlayerComplete.listen((_) {
+      /// Register exactly one completion listener for this play session.
+      _completeSub = player.onPlayerComplete.listen((_) {
         if (mounted) setState(() => _playing = null);
       });
     }
@@ -491,6 +504,8 @@ class _CriesCardState extends State<_CriesCard> {
         widget.latestUrl.isNotEmpty || widget.legacyUrl.isNotEmpty;
 
     if (!hasAny) return const SizedBox.shrink();
+    /// Keep provider alive while this widget is mounted.
+    ref.watch(audioPlayerProvider);
 
     return Card(
       child: Padding(
@@ -543,6 +558,7 @@ class _CryButton extends StatelessWidget {
 
   /// Creates a [_CryButton].
   const _CryButton({
+    super.key,
     required this.label,
     required this.isPlaying,
     required this.onTap,
@@ -571,7 +587,7 @@ class _CryButton extends StatelessWidget {
   }
 }
 
-/// Shows front/back sprites — normal set or shiny set depending on [isShiny].
+/// Shows front/back sprites , normal set or shiny set depending on [isShiny].
 class _SpriteGallery extends StatelessWidget {
   /// Front-default sprite URL.
   final String frontDefault;
@@ -590,6 +606,7 @@ class _SpriteGallery extends StatelessWidget {
 
   /// Creates [_SpriteGallery] from four sprite URLs.
   const _SpriteGallery({
+    super.key,
     required this.frontDefault,
     required this.backDefault,
     required this.frontShiny,
@@ -633,21 +650,18 @@ class _SpriteGallery extends StatelessWidget {
                         SizedBox(
                           width: 80,
                           height: 80,
-                          child: Image.network(
-                            s.$2,
+                          child: CachedNetworkImage(
+                            imageUrl: s.$2,
                             fit: BoxFit.contain,
-                            loadingBuilder: (ctx, child, progress) =>
-                                progress == null
-                                    ? child
-                                    : const Center(
-                                        child: SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        ),
-                                      ),
-                            errorBuilder: (ctx, _, __) => const Icon(
+                            placeholder: (ctx, _) => const Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2),
+                              ),
+                            ),
+                            errorWidget: (ctx, _, __) => const Icon(
                                 Icons.broken_image_outlined,
                                 size: 40),
                           ),
@@ -671,11 +685,11 @@ class _SpriteGallery extends StatelessWidget {
 
 /// Card listing all abilities, flagging hidden ones.
 class _AbilitiesCard extends StatelessWidget {
-  /// Ability names in slot order (hidden last, if any).
-  final List<String> abilities;
+  /// Ability entries in slot order with hidden flag from API.
+  final List<({String name, bool isHidden})> abilities;
 
   /// Creates [_AbilitiesCard] for [abilities].
-  const _AbilitiesCard({required this.abilities});
+  const _AbilitiesCard({super.key, required this.abilities});
 
   @override
   Widget build(BuildContext context) {
@@ -690,17 +704,9 @@ class _AbilitiesCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     )),
             const SizedBox(height: 8),
-            /// Each ability on its own row; last entry may be hidden ability.
-            ...abilities.asMap().entries.map((e) {
-              /// PokéAPI puts hidden abilities at the last slot (slot 3).
-              /// We flag the last item if count > 1 as potentially hidden.
-              final isHidden =
-                  abilities.length > 1 && e.key == abilities.length - 1;
-              final display = e.value
-                  .split('-')
-                  .map((w) =>
-                      w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-                  .join(' ');
+            /// Each ability on its own row; hidden marker uses API field.
+            ...abilities.map((ability) {
+              final display = toDisplayName(ability.name);
 
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
@@ -710,7 +716,7 @@ class _AbilitiesCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(display,
                         style: Theme.of(context).textTheme.bodyMedium),
-                    if (isHidden) ...[
+                    if (ability.isHidden) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -744,13 +750,7 @@ class _GameIndicesCard extends StatelessWidget {
   final List<String> gameIndices;
 
   /// Creates [_GameIndicesCard] for [gameIndices].
-  const _GameIndicesCard({required this.gameIndices});
-
-  /// Converts hyphenated version name to title-cased display name.
-  String _display(String name) => name
-      .split('-')
-      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-      .join(' ');
+  const _GameIndicesCard({super.key, required this.gameIndices});
 
   @override
   Widget build(BuildContext context) {
@@ -788,14 +788,14 @@ class _GameIndicesCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            /// Wrap chips — they flow to next line automatically.
+            /// Wrap chips , they flow to next line automatically.
             Wrap(
               spacing: 6,
               runSpacing: 4,
               children: gameIndices.map((g) {
                 return Chip(
                   label: Text(
-                    _display(g),
+                    toDisplayName(g),
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSecondaryContainer,
@@ -821,7 +821,7 @@ class _BaseStatsCard extends StatelessWidget {
   final Map<String, int> stats;
 
   /// Creates [_BaseStatsCard] for [stats].
-  const _BaseStatsCard({required this.stats});
+  const _BaseStatsCard({super.key, required this.stats});
 
   @override
   Widget build(BuildContext context) {
@@ -867,20 +867,19 @@ class _StatBar extends StatelessWidget {
   final int value;
 
   /// Creates a [_StatBar] for [label] with [value].
-  const _StatBar({required this.label, required this.value});
+  const _StatBar({super.key, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     /// Maximum base stat across all Pokémon is 255 (Blissey HP).
     const maxStat = 255.0;
 
-    /// Bar colour transitions from red (low) → orange → green (high).
+    /// Bar colour transitions low → mid → high using theme-aware colours.
+    /// [ColorScheme.error] for low stats, harmonised orange/green for mid/high
+    /// so bars respect the active theme seed rather than hard-coded hues.
     final ratio = value / maxStat;
-    final barColor = ratio < 0.33
-        ? Colors.red
-        : ratio < 0.66
-            ? Colors.orange
-            : Colors.green;
+    final scheme = Theme.of(context).colorScheme;
+    final barColor = _statColor(ratio, scheme);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -928,6 +927,17 @@ class _StatBar extends StatelessWidget {
       ),
     );
   }
+
+  /// Maps a 0–1 stat ratio to a theme-aware colour using [ColorScheme] only.
+  /// No hardcoded hues , all three tones are derived from the active seed:
+  ///   low  → [ColorScheme.error]     (semantic red, seed-adaptive)
+  ///   mid  → [ColorScheme.tertiary]  (seed-generated warning tone)
+  ///   high → [ColorScheme.secondary] (seed-generated positive tone)
+  Color _statColor(double ratio, ColorScheme scheme) {
+    if (ratio < 0.33) return scheme.error;
+    if (ratio < 0.66) return scheme.tertiary;
+    return scheme.secondary;
+  }
 }
 
 /// Move method display labels and sort priority.
@@ -943,30 +953,45 @@ const _methodOrder = ['level-up', 'machine', 'egg', 'tutor'];
 
 /// Card showing all learnable moves grouped by learn method.
 /// Within each group: level-up sorted by level, rest alphabetical.
-class _MovesCard extends StatelessWidget {
+class _MovesCard extends StatefulWidget {
   /// All learnable moves with method and level data.
   final List<MoveEntry> moves;
 
   /// Creates [_MovesCard] for [moves].
-  const _MovesCard({required this.moves});
-
-  /// Converts hyphenated API name to title-cased display name.
-  String _display(String name) => name
-      .split('-')
-      .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-      .join(' ');
+  const _MovesCard({super.key, required this.moves});
 
   @override
-  Widget build(BuildContext context) {
-    if (moves.isEmpty) return const SizedBox.shrink();
+  State<_MovesCard> createState() => _MovesCardState();
+}
 
-    /// Group moves by learn method.
+class _MovesCardState extends State<_MovesCard> {
+  /// Grouped and sorted moves , computed once per unique [moves] list.
+  late Map<String, List<MoveEntry>> _groups;
+
+  /// Ordered group keys , known methods first, unknowns appended.
+  late List<String> _orderedKeys;
+
+  @override
+  void initState() {
+    super.initState();
+    _computeGroups(widget.moves);
+  }
+
+  @override
+  void didUpdateWidget(_MovesCard old) {
+    super.didUpdateWidget(old);
+    /// Re-compute only when the moves list reference changes (new detail load).
+    if (!identical(old.moves, widget.moves)) {
+      _computeGroups(widget.moves);
+    }
+  }
+
+  /// Groups and sorts [moves] once; result stored in [_groups] and [_orderedKeys].
+  void _computeGroups(List<MoveEntry> moves) {
     final groups = <String, List<MoveEntry>>{};
     for (final m in moves) {
       (groups[m.learnMethod] ??= []).add(m);
     }
-
-    /// Sort each group: level-up by level asc, others alphabetically.
     for (final entry in groups.entries) {
       if (entry.key == 'level-up') {
         entry.value.sort((a, b) => a.levelLearnedAt.compareTo(b.levelLearnedAt));
@@ -974,12 +999,19 @@ class _MovesCard extends StatelessWidget {
         entry.value.sort((a, b) => a.name.compareTo(b.name));
       }
     }
-
-    /// Render known methods first in priority order, unknowns after.
-    final orderedKeys = [
+    _groups = groups;
+    _orderedKeys = [
       ..._methodOrder.where(groups.containsKey),
       ...groups.keys.where((k) => !_methodOrder.contains(k)),
     ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.moves.isEmpty) return const SizedBox.shrink();
+
+    final groups = _groups;
+    final orderedKeys = _orderedKeys;
 
     final scheme = Theme.of(context).colorScheme;
     final labelStyle = Theme.of(context)
@@ -1013,7 +1045,7 @@ class _MovesCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${moves.length}',
+                    '${widget.moves.length}',
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
                 ),
@@ -1023,13 +1055,13 @@ class _MovesCard extends StatelessWidget {
 
             /// One section per learn method.
             for (final key in orderedKeys) ...[
-              /// Section header — method label + group count.
+              /// Section header , method label + group count.
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 4),
                 child: Row(
                   children: [
                     Text(
-                      _methodLabels[key] ?? _display(key),
+                      _methodLabels[key] ?? toDisplayName(key),
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: scheme.primary,
                             fontWeight: FontWeight.bold,
@@ -1065,11 +1097,11 @@ class _MovesCard extends StatelessWidget {
                   rows: groups[key]!.asMap().entries.map((e) {
                     return DataRow(cells: [
                       DataCell(Text('${e.key + 1}', style: labelStyle)),
-                      DataCell(Text(_display(e.value.name), style: valueStyle)),
+                      DataCell(Text(toDisplayName(e.value.name), style: valueStyle)),
                       if (key == 'level-up')
                         DataCell(Text(
                           e.value.levelLearnedAt == 0
-                              ? '—'
+                              ? ','
                               : '${e.value.levelLearnedAt}',
                           style: valueStyle,
                         )),

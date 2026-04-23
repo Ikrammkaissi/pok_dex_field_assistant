@@ -1,6 +1,6 @@
 /// Data models for the Pokémon search feature.
 /// [PokemonSummary] is for list rows; [PokemonDetail] is for full detail.
-/// Both parse directly from PokéAPI JSON — no separate domain entities needed.
+/// Both parse directly from PokéAPI JSON , no separate domain entities needed.
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 
 /// Single learnable move with learn method and level (from latest version group).
@@ -45,7 +45,7 @@ class MoveEntry {
 
 /// Lightweight model for one row in the search list.
 /// Parsed from `/pokemon/{nameOrId}` detail response because the bare
-/// list endpoint returns only name + url — no sprites.
+/// list endpoint returns only name + url , no sprites.
 class PokemonSummary {
   /// National Pokédex number.
   final int id;
@@ -92,7 +92,7 @@ class PokemonSummary {
       /// Extract sprites object for the thumbnail URL.
       final sprites = json['sprites'] as Map<String, dynamic>;
 
-      /// front_default can be null for some forms — fall back to empty string.
+      /// front_default can be null for some forms , fall back to empty string.
       final spriteUrl = sprites['front_default'] as String? ?? '';
 
       /// Primary type is the first type entry by slot order.
@@ -132,7 +132,7 @@ class PokemonListPage {
   const PokemonListPage({required this.items, required this.hasMore});
 }
 
-/// Full Pokémon detail model — all fields shown on the detail screen.
+/// Full Pokémon detail model , all fields shown on the detail screen.
 /// Parsed from the `/pokemon/{nameOrId}` JSON response.
 class PokemonDetail {
   /// National Pokédex number.
@@ -153,10 +153,10 @@ class PokemonDetail {
   /// Back-facing shiny sprite URL.
   final String backShinySpriteUrl;
 
-  /// Official artwork URL — high-resolution image shown on the detail screen.
+  /// Official artwork URL , high-resolution image shown on the detail screen.
   final String officialArtworkUrl;
 
-  /// Shiny official artwork URL — shown when the shiny toggle is active.
+  /// Shiny official artwork URL , shown when the shiny toggle is active.
   final String officialArtworkShinyUrl;
 
   /// Base experience awarded when this Pokémon is defeated.
@@ -177,8 +177,8 @@ class PokemonDetail {
   /// Weight in hectograms as returned by PokéAPI.
   final int weight;
 
-  /// Ability names in slot order (non-hidden first, hidden last).
-  final List<String> abilities;
+  /// Ability entries in slot order with `isHidden` truth from PokéAPI.
+  final List<({String name, bool isHidden})> abilities;
 
   /// Base stat values keyed by stat name (e.g. {'hp': 78, 'attack': 84}).
   final Map<String, int> stats;
@@ -186,10 +186,10 @@ class PokemonDetail {
   /// Game version names this Pokémon appears in (e.g. ['red', 'blue', 'gold']).
   final List<String> gameIndices;
 
-  /// Latest cry audio URL (OGG) — modern sound used in recent games.
+  /// Latest cry audio URL (OGG) , modern sound used in recent games.
   final String cryLatestUrl;
 
-  /// Legacy cry audio URL (OGG) — original 8-bit sound from older games.
+  /// Legacy cry audio URL (OGG) , original 8-bit sound from older games.
   final String cryLegacyUrl;
 
   /// Creates an immutable [PokemonDetail].
@@ -225,12 +225,12 @@ class PokemonDetail {
       /// Null-safe: some forms have no front_default sprite.
       final spriteUrl = sprites['front_default'] as String? ?? '';
 
-      /// Back-facing and shiny sprite variants — may be null for some forms.
+      /// Back-facing and shiny sprite variants , may be null for some forms.
       final backSpriteUrl = sprites['back_default'] as String? ?? '';
       final frontShinySpriteUrl = sprites['front_shiny'] as String? ?? '';
       final backShinySpriteUrl = sprites['back_shiny'] as String? ?? '';
 
-      /// Official artwork — higher resolution than front_default sprite.
+      /// Official artwork , higher resolution than front_default sprite.
       final other = sprites['other'] as Map<String, dynamic>? ?? {};
       final artwork = other['official-artwork'] as Map<String, dynamic>? ?? {};
       final officialArtworkUrl =
@@ -244,10 +244,16 @@ class PokemonDetail {
           .map((t) => (t as Map<String, dynamic>)['type']['name'] as String)
           .toList();
 
-      /// Map each abilities entry to its ability name string.
+      /// Map each abilities entry to ability name and hidden flag.
       final abilitiesRaw = json['abilities'] as List<dynamic>;
       final abilities = abilitiesRaw
-          .map((a) => (a as Map<String, dynamic>)['ability']['name'] as String)
+          .map((a) {
+            final map = a as Map<String, dynamic>;
+            return (
+              name: (map['ability'] as Map<String, dynamic>)['name'] as String,
+              isHidden: map['is_hidden'] as bool? ?? false,
+            );
+          })
           .toList();
 
       /// Build stat map: stat-name → base_stat integer value.
@@ -258,7 +264,7 @@ class PokemonDetail {
               s['base_stat'] as int,
       };
 
-      /// Parse learnable moves — name + learn method + level from latest version.
+      /// Parse learnable moves , name + learn method + level from latest version.
       final movesRaw = json['moves'] as List<dynamic>? ?? [];
       final moves = movesRaw
           .map((m) => MoveEntry.fromJson(m as Map<String, dynamic>))
@@ -274,7 +280,7 @@ class PokemonDetail {
         backShinySpriteUrl: backShinySpriteUrl,
         officialArtworkUrl: officialArtworkUrl,
         officialArtworkShinyUrl: officialArtworkShinyUrl,
-        /// base_experience may be null for some forms — default to 0.
+        /// base_experience may be null for some forms , default to 0.
         baseExperience: json['base_experience'] as int? ?? 0,
         moveCount: moveCount,
         moves: moves,
@@ -289,7 +295,7 @@ class PokemonDetail {
             .map((g) =>
                 (g as Map<String, dynamic>)['version']['name'] as String)
             .toList(),
-        /// Parse cry URLs — null if not present for this Pokémon form.
+        /// Parse cry URLs , null if not present for this Pokémon form.
         cryLatestUrl: (json['cries'] as Map<String, dynamic>?)?['latest']
                 as String? ??
             '',

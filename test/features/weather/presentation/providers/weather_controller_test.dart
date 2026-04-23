@@ -1,6 +1,6 @@
 /// Unit tests for [WeatherController].
 /// Uses a hand-written fake [WeatherRepository] and [ProviderContainer] overrides
-/// — no real network calls, no Flutter widgets needed.
+/// , no real network calls, no Flutter widgets needed.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
@@ -8,7 +8,6 @@ import 'package:pok_dex_field_assistant/features/weather/data/models/weather_mod
 import 'package:pok_dex_field_assistant/features/weather/data/weather_repository.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_controller.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_providers.dart';
-import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -38,7 +37,7 @@ List<PokemonSummary> _dummyPokemon(int count) => List.generate(
 // Fake repository
 // ---------------------------------------------------------------------------
 
-/// Configurable fake — controls happy-path responses and whether to throw.
+/// Configurable fake , controls happy-path responses and whether to throw.
 class _FakeWeatherRepository implements WeatherRepository {
   /// Returned by [getCurrentWeather] on success.
   final WeatherData weatherResult;
@@ -58,6 +57,9 @@ class _FakeWeatherRepository implements WeatherRepository {
   /// Records every lat value passed to [getCurrentWeather].
   final List<double> latHistory = [];
 
+  /// Records every lon value passed to [getCurrentWeather].
+  final List<double> lonHistory = [];
+
   _FakeWeatherRepository({
     WeatherData? weatherResult,
     List<PokemonSummary>? pokemonResult,
@@ -72,6 +74,7 @@ class _FakeWeatherRepository implements WeatherRepository {
     required double lon,
   }) async {
     latHistory.add(lat);
+    lonHistory.add(lon);
     if (weatherError != null) throw weatherError!;
     return weatherResult;
   }
@@ -89,7 +92,7 @@ class _FakeWeatherRepository implements WeatherRepository {
 // ---------------------------------------------------------------------------
 
 /// Creates a [ProviderContainer] with [WeatherRepositoryImpl] overridden by [repo].
-/// Returns the container — caller must call [container.dispose] when done.
+/// Returns the container , caller must call [container.dispose] when done.
 ProviderContainer _makeContainer(_FakeWeatherRepository repo) {
   return ProviderContainer(
     overrides: [
@@ -107,7 +110,7 @@ void main() {
   // Initialisation
   // -------------------------------------------------------------------------
 
-  group('WeatherController — init', () {
+  group('WeatherController , init', () {
     test('starts in loading state', () {
       final repo = _FakeWeatherRepository();
       final container = _makeContainer(repo);
@@ -169,7 +172,7 @@ void main() {
   // Success state
   // -------------------------------------------------------------------------
 
-  group('WeatherController — success state', () {
+  group('WeatherController , success state', () {
     test('shows first page (20 items) when total > 20', () async {
       final repo = _FakeWeatherRepository(pokemonResult: _dummyPokemon(25));
       final container = _makeContainer(repo);
@@ -223,7 +226,7 @@ void main() {
   // Error states
   // -------------------------------------------------------------------------
 
-  group('WeatherController — error states', () {
+  group('WeatherController , error states', () {
     test('emits error state when weather fetch fails', () async {
       final repo = _FakeWeatherRepository(
         weatherError: Exception('network down'),
@@ -275,10 +278,10 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Pagination — loadMore
+  // Pagination , loadMore
   // -------------------------------------------------------------------------
 
-  group('WeatherController — loadMore', () {
+  group('WeatherController , loadMore', () {
     test('appends next page on loadMore', () async {
       final repo = _FakeWeatherRepository(pokemonResult: _dummyPokemon(25));
       final container = _makeContainer(repo);
@@ -344,7 +347,7 @@ void main() {
   // Coordinate handling
   // -------------------------------------------------------------------------
 
-  group('WeatherController — coordinates', () {
+  group('WeatherController , coordinates', () {
     test('fetchWeatherSuggestions uses provided lat/lon', () async {
       final repo = _FakeWeatherRepository();
       final container = _makeContainer(repo);
@@ -396,12 +399,82 @@ void main() {
       final controller = container.read(weatherControllerProvider.notifier);
       await controller.fetchWeatherSuggestions(lat: 51.5, lon: -0.1);
 
-      /// Retry — no lat/lon/randomise args.
+      /// Retry , no lat/lon/randomise args.
       await controller.fetchWeatherSuggestions();
 
       final state = container.read(weatherControllerProvider);
       expect(state.lat, 51.5);
       expect(state.lon, -0.1);
+    });
+
+    test('raw coordinates parse and fetch successfully', () async {
+      final repo = _FakeWeatherRepository();
+      final container = _makeContainer(repo);
+      addTearDown(container.dispose);
+
+      await container
+          .read(weatherControllerProvider.notifier)
+          .fetchWeatherSuggestions(rawLat: '36.8', rawLon: '10.1');
+
+      final state = container.read(weatherControllerProvider);
+      expect(state.error, isNull);
+      expect(state.lat, 36.8);
+      expect(state.lon, 10.1);
+      expect(repo.latHistory.last, 36.8);
+      expect(repo.lonHistory.last, 10.1);
+    });
+
+    test('raw invalid numbers set validation error and skip fetch', () async {
+      final repo = _FakeWeatherRepository();
+      final container = _makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final controller = container.read(weatherControllerProvider.notifier);
+      await controller.fetchWeatherSuggestions();
+      repo.latHistory.clear();
+
+      final beforeCalls = repo.latHistory.length;
+      await controller.fetchWeatherSuggestions(rawLat: 'abc', rawLon: '10.1');
+
+      final state = container.read(weatherControllerProvider);
+      expect(state.error, 'Enter valid numbers for lat and lon.');
+      expect(repo.latHistory.length, beforeCalls);
+    });
+
+    test('raw out-of-range latitude sets validation error and skips fetch',
+        () async {
+      final repo = _FakeWeatherRepository();
+      final container = _makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final controller = container.read(weatherControllerProvider.notifier);
+      await controller.fetchWeatherSuggestions();
+      repo.latHistory.clear();
+
+      final beforeCalls = repo.latHistory.length;
+      await controller.fetchWeatherSuggestions(rawLat: '120', rawLon: '10.1');
+
+      final state = container.read(weatherControllerProvider);
+      expect(state.error, 'Latitude must be between -90 and 90.');
+      expect(repo.latHistory.length, beforeCalls);
+    });
+
+    test('raw out-of-range longitude sets validation error and skips fetch',
+        () async {
+      final repo = _FakeWeatherRepository();
+      final container = _makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final controller = container.read(weatherControllerProvider.notifier);
+      await controller.fetchWeatherSuggestions();
+      repo.latHistory.clear();
+
+      final beforeCalls = repo.latHistory.length;
+      await controller.fetchWeatherSuggestions(rawLat: '36.8', rawLon: '190');
+
+      final state = container.read(weatherControllerProvider);
+      expect(state.error, 'Longitude must be between -180 and 180.');
+      expect(repo.latHistory.length, beforeCalls);
     });
   });
 }
