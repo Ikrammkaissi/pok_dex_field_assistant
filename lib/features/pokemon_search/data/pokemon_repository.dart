@@ -51,18 +51,20 @@ class PokemonRepositoryImpl implements PokemonRepository {
 
       /// Fire all detail calls concurrently to minimise wall-clock time.
       final futures = nameList.map((entry) async {
-        /// Each entry has a name field we pass to the detail endpoint.
+        /// Each entry has a name and a canonical API URL with the Pokémon ID.
         final name = entry['name'] as String;
+        final apiUrl = entry['url'] as String;
 
-        /// Detail endpoint returns all fields including types and sprites.
+        /// Detail endpoint returns types — still needed; sprite derived from URL.
         final detailJson = await _client.get('/pokemon/$name');
         final detail = PokemonDetail.fromJson(detailJson);
 
-        /// Build summary from detail — list endpoint has no sprites.
+        /// Derive sprite URL from the list entry's API URL — no extra request,
+        /// no dependence on the detail JSON sprite field being non-null.
         return PokemonSummary(
           id: detail.id,
           name: detail.name,
-          spriteUrl: detail.spriteUrl,
+          spriteUrl: _spriteUrlFromApiUrl(apiUrl),
           primaryType: detail.types.isNotEmpty ? detail.types.first : '',
         );
       });
@@ -77,6 +79,22 @@ class PokemonRepositoryImpl implements PokemonRepository {
           error: e, stackTrace: s);
       rethrow;
     }
+  }
+
+  /// Derives the front-default sprite CDN URL from a PokéAPI resource URL.
+  ///
+  /// PokéAPI list entries include a canonical URL such as:
+  ///   `https://pokeapi.co/api/v2/pokemon/1/`
+  /// Extracting the trailing numeric ID and inserting it into the sprite CDN
+  /// path gives the same URL as `sprites.front_default` in the detail response,
+  /// without parsing the detail JSON for this value.
+  ///
+  /// Example: `https://pokeapi.co/api/v2/pokemon/1/`
+  ///       → `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png`
+  static String _spriteUrlFromApiUrl(String url) {
+    /// Last non-empty segment of the path is always the numeric Pokémon ID.
+    final id = url.split('/').where((s) => s.isNotEmpty).last;
+    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/$id.png';
   }
 
   /// Fetches full detail for [nameOrId] directly from the network.

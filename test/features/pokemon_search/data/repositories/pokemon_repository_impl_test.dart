@@ -51,13 +51,14 @@ const _charmanderJson = <String, dynamic>{
 };
 
 /// List-endpoint response with a next page available.
+/// urls match the canonical PokéAPI pattern so _spriteUrlFromApiUrl can extract IDs.
 const _listJsonWithMore = <String, dynamic>{
   'count': 1350,
   'next': 'https://pokeapi.co/api/v2/pokemon?offset=2&limit=2',
   'previous': null,
   'results': [
-    {'name': 'bulbasaur', 'url': ''},
-    {'name': 'charmander', 'url': ''},
+    {'name': 'bulbasaur', 'url': 'https://pokeapi.co/api/v2/pokemon/1/'},
+    {'name': 'charmander', 'url': 'https://pokeapi.co/api/v2/pokemon/4/'},
   ],
 };
 
@@ -67,8 +68,8 @@ const _listJsonNoMore = <String, dynamic>{
   'next': null,
   'previous': null,
   'results': [
-    {'name': 'bulbasaur', 'url': ''},
-    {'name': 'charmander', 'url': ''},
+    {'name': 'bulbasaur', 'url': 'https://pokeapi.co/api/v2/pokemon/1/'},
+    {'name': 'charmander', 'url': 'https://pokeapi.co/api/v2/pokemon/4/'},
   ],
 };
 
