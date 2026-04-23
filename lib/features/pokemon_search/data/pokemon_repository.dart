@@ -63,6 +63,7 @@ class PokemonRepositoryImpl implements PokemonRepository {
           id: detail.id,
           name: detail.name,
           spriteUrl: detail.spriteUrl,
+          primaryType: detail.types.isNotEmpty ? detail.types.first : '',
         );
       });
 

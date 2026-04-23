@@ -10,6 +10,16 @@ void main() {
     'id': 1,
     'name': 'bulbasaur',
     'sprites': {'front_default': 'https://example.com/1.png'},
+    'types': [
+      {
+        'slot': 1,
+        'type': {'name': 'grass'},
+      },
+      {
+        'slot': 2,
+        'type': {'name': 'poison'},
+      },
+    ],
   };
 
   group('PokemonSummary.fromJson', () {
@@ -20,6 +30,7 @@ void main() {
       expect(model.id, 1);
       expect(model.name, 'bulbasaur');
       expect(model.spriteUrl, 'https://example.com/1.png');
+      expect(model.primaryType, 'grass');
     });
 
     /// PokéAPI returns null for `front_default` on some alternate forms.
@@ -31,6 +42,7 @@ void main() {
       final model = PokemonSummary.fromJson(json);
 
       expect(model.spriteUrl, '');
+      expect(model.primaryType, 'grass');
     });
 
     /// Missing top-level field should throw [ParseException], not a raw TypeError.
