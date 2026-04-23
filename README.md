@@ -25,7 +25,7 @@ No API keys required. Uses [PokéAPI](https://pokeapi.co) and [Open-Meteo](https
 ### Initial setup
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Ikrammkaissi/pok_dex_field_assistant.git
 cd pok_dex_field_assistant
 flutter pub get
 ```
