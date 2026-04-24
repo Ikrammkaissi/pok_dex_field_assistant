@@ -41,7 +41,7 @@ flutter analyze                # lint
 
 ## Architecture
 
-Feature-first, three layers per feature: `data` → `presentation`. No separate domain layer — models are simple enough to share.
+Feature-first clean architecture: `presentation` → `domain` → `data`. Each layer only imports inward.
 
 ```
 lib/
@@ -49,24 +49,41 @@ lib/
   core/           # Shared HTTP clients, typed exceptions, logger
   features/
     pokemon_search/
-      data/       # PokemonRepository, models (PokemonSummary, PokemonDetail, MoveEntry)
+      data/
+        models/       # PokemonSummary, PokemonDetail, MoveEntry (JSON DTOs)
+        repositories/ # PokemonRepositoryImpl (HTTP calls, implements domain interface)
+        providers/    # httpClientProvider, pokemonRepositoryProvider, use case providers
+      domain/
+        repositories/ # PokemonRepository (abstract interface)
+        usecases/     # GetPokemonList, GetPokemonDetail
       presentation/
-        providers/  # Riverpod providers + PokemonSearchController (StateNotifier)
-        screens/    # SearchScreen, DetailScreen
-        widgets/    # PokemonListTile
+        providers/    # PokemonSearchController (StateNotifier), pokemonSearchControllerProvider
+        screens/      # SearchScreen, DetailScreen
+        widgets/      # PokemonListTile
     bookmarks/
-      data/       # BookmarkRepository (SharedPreferences)
+      data/
+        repositories/ # BookmarkRepositoryImpl (SharedPreferences)
+      domain/
+        repositories/ # BookmarkRepository (abstract interface)
+        usecases/     # GetBookmarks, SetBookmarks
       presentation/
-        providers/  # BookmarkNotifier, isBookmarkedProvider, bookmarkedNamesProvider
-        screens/    # BookmarksScreen
+        providers/    # BookmarkNotifier, isBookmarkedProvider, bookmarkedNamesProvider
+        screens/      # BookmarksScreen
     weather/
-      data/       # WeatherRepository (Open-Meteo + PokéAPI type endpoint)
+      data/
+        models/       # WeatherData (Open-Meteo JSON DTO)
+        repositories/ # WeatherRepositoryImpl (Open-Meteo + PokéAPI type endpoint)
+      domain/
+        repositories/ # WeatherRepository (abstract interface)
+        usecases/     # GetCurrentWeather, GetPokemonByType
       presentation/
-        providers/  # WeatherController (StateNotifier), WeatherState
-        screens/    # WeatherPokemonScreen
+        providers/    # WeatherController (StateNotifier), WeatherState
+        screens/      # WeatherPokemonScreen
 ```
 
-**State management:** Riverpod `StateNotifier`. Each feature owns its provider file. 
+**Dependency rule:** `presentation` calls use cases; use cases call repository interfaces; data layer implements those interfaces. Nothing imports outward.
+
+**State management:** Riverpod `StateNotifier`. Each feature owns its provider file.
 
 **APIs:** [PokéAPI v2](https://pokeapi.co) + [Open-Meteo](https://open-meteo.com) — both public, no auth.
 
@@ -86,33 +103,7 @@ flutter test test/features/weather/
 
 ## What I'd Improve With More Time
 
-
-**1. Extendable to full Clean Architecture**
-No domain layer currently , models are simple enough to share across features. If the app grew , this structure slots in without rewriting anything:
-
-```
-features/pokemon_search/
-  data/
-    models/           ← raw API models (JSON shape)
-    repositories/
-      pokemon_repository_impl.dart   ← HTTP calls only
-  domain/
-    entities/
-      pokemon.dart    ← clean business objects, no JSON coupling
-    repositories/
-      pokemon_repository.dart  ← interface moves here (consumed by domain)
-    usecases/
-      search_pokemon.dart      ← one class, one operation
-      get_pokemon_detail.dart
-  presentation/
-    providers/        ← controllers call use cases, not repos directly
-    screens/
-    widgets/
-```
-
----
-
-**2. Migrate `StateNotifier` → `Notifier` / `AsyncNotifier`**
+**1. Migrate `StateNotifier` → `Notifier` / `AsyncNotifier`**
 Riverpod 2.x deprecated `StateNotifier`. All three controllers need migration before the next major version breaks the upgrade path.
 
 **2. Add image caching with a size cap**
@@ -136,10 +127,7 @@ No `Semantics` labels on sprites, stat bars, or type chips. Screen readers get m
 **10. Sliding window was considered and removed**
 An earlier version capped the list at 180 items, evicting pages as the user scrolled. It was removed because ~1000 `PokemonSummary` objects total ≈ 100 KB — the memory problem didn't exist at this scale. The current append-only list is simpler and equally performant. A window would be justified if storing full `PokemonDetail` for all entries (~50 MB).
 
-**11.Coverage gaps — tests not yet implemented**
-- `BookmarkRepository` + `BookmarkNotifier` — toggle, persist, dedupe logic
-- `DetailScreen` widget — loading/error/success states, shiny toggle, bookmark tap
-- HTTP clients (`PokeApiHttpClient`, `WeatherHttpClient`) — 2xx, 4xx, socket error, malformed JSON
+
 
 ---
 
