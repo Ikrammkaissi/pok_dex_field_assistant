@@ -127,8 +127,7 @@ No `Semantics` labels on sprites, stat bars, or type chips. Screen readers get m
 **10. Sliding window was considered and removed**
 An earlier version capped the list at 180 items, evicting pages as the user scrolled. It was removed because ~1000 `PokemonSummary` objects total ≈ 100 KB — the memory problem didn't exist at this scale. The current append-only list is simpler and equally performant. A window would be justified if storing full `PokemonDetail` for all entries (~50 MB).
 
-**10. Add entity layer**
-Models in `data/models/` are shared as domain types. For stricter isolation, domain `entities/` classes would decouple business logic from JSON shape — at the cost of mapping boilerplate.
+
 
 ---
 
