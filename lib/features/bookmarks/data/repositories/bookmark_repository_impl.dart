@@ -1,19 +1,20 @@
 /// Concrete implementation of [BookmarkRepository] backed by [SharedPreferences].
 ///
-/// Lives in the data layer — the only layer allowed to import [SharedPreferences].
-/// The domain layer depends on the abstract [BookmarkRepository] interface, not
-/// this class, so the storage mechanism can be swapped (e.g. SQLite) without
-/// touching use cases or the notifier.
+/// Lives in the data layer — the only layer allowed to import [SharedPreferences]
+/// and JSON serialisation mappers.  The domain layer depends on the abstract
+/// [BookmarkRepository] interface, not this class, so the storage mechanism
+/// can be swapped (e.g. SQLite) without touching use cases or the notifier.
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/domain/repositories/bookmark_repository.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_summary_mapper.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 
 /// Implements [BookmarkRepository] using SharedPreferences JSON serialisation.
 /// Bookmarks are stored as a `List<String>` of JSON-encoded [PokemonSummary]
-/// objects under [_key].
+/// objects under [_key]. [PokemonSummaryMapper] handles all JSON ↔ entity conversion.
 class BookmarkRepositoryImpl implements BookmarkRepository {
   /// Logger tag used for all log lines emitted by this class.
   static const _tag = 'BookmarkRepository';
@@ -28,24 +29,24 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   const BookmarkRepositoryImpl(this._prefs);
 
   /// Reads the raw JSON string list from SharedPreferences and deserialises
-  /// each entry into a [PokemonSummary]. Returns an empty list if the key is absent.
+  /// each entry into a [PokemonSummary] entity via [PokemonSummaryMapper].
+  /// Returns an empty list if the key is absent.
   @override
   Future<List<PokemonSummary>> getBookmarks() async {
     /// Read the stored string list; default to empty when key is absent.
     final raw = _prefs.getStringList(_key) ?? [];
     AppLogger.debug(_tag, 'getBookmarks , ${raw.length} entries in prefs');
     final result = raw.map((s) {
-      /// Decode each JSON string back to a map, then parse the summary.
+      /// Decode each JSON string back to a map, then parse via mapper.
       final json = jsonDecode(s) as Map<String, dynamic>;
-      return PokemonSummary.fromBookmarkJson(json);
+      return PokemonSummaryMapper.fromBookmarkJson(json);
     }).toList();
     AppLogger.info(_tag, 'Loaded ${result.length} bookmarks');
     return result;
   }
 
-  /// Serialises [bookmarks] and writes them to SharedPreferences in one call.
-  /// Replaces the entire stored list — callers are responsible for providing
-  /// the complete authoritative state.
+  /// Serialises [bookmarks] via [PokemonSummaryMapper] and writes them to
+  /// SharedPreferences in one call. Replaces the entire stored list.
   @override
   Future<void> setBookmarks(List<PokemonSummary> bookmarks) async {
     AppLogger.debug(
@@ -87,11 +88,14 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     await _persist(current);
   }
 
-  /// Serialises [bookmarks] to JSON strings and writes them to SharedPreferences.
-  /// Called by both [setBookmarks], [addBookmark], and [removeBookmark].
+  /// Serialises [bookmarks] to JSON strings via [PokemonSummaryMapper] and
+  /// writes them to SharedPreferences. Called by [setBookmarks], [addBookmark],
+  /// and [removeBookmark].
   Future<void> _persist(List<PokemonSummary> bookmarks) async {
-    /// Encode each summary to a JSON string for flat string-list storage.
-    final encoded = bookmarks.map((p) => jsonEncode(p.toJson())).toList();
+    /// Encode each entity to a JSON string for flat string-list storage.
+    final encoded = bookmarks
+        .map((p) => jsonEncode(PokemonSummaryMapper.toBookmarkJson(p)))
+        .toList();
     await _prefs.setStringList(_key, encoded);
     AppLogger.debug(
         _tag, '_persist , wrote ${encoded.length} entries to prefs');

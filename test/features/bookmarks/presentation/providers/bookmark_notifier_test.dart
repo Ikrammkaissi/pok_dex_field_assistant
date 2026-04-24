@@ -3,7 +3,7 @@ import 'package:pok_dex_field_assistant/features/bookmarks/domain/repositories/b
 import 'package:pok_dex_field_assistant/features/bookmarks/domain/usecases/get_bookmarks.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/domain/usecases/set_bookmarks.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_notifier.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 
 const _bulbasaur = PokemonSummary(
   id: 1,

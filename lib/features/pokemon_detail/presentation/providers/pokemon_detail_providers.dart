@@ -5,8 +5,8 @@
 ///   → pokemonDetailProvider
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/providers/pokemon_data_providers.dart';
+import 'package:pok_dex_field_assistant/app/di/pokemon_search_di.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_detail.dart';
 
 /// Fetches full detail for a single Pokémon identified by name or numeric id string.
 ///

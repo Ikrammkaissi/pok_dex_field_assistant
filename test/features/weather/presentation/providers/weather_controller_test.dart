@@ -3,8 +3,8 @@
 /// , no real network calls, no Flutter widgets needed.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
-import 'package:pok_dex_field_assistant/features/weather/data/models/weather_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
+import 'package:pok_dex_field_assistant/features/weather/domain/entities/weather_data.dart';
 import 'package:pok_dex_field_assistant/features/weather/domain/repositories/weather_repository.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_controller.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_providers.dart';
@@ -14,14 +14,13 @@ import 'package:pok_dex_field_assistant/features/weather/presentation/providers/
 // ---------------------------------------------------------------------------
 
 /// A [WeatherData] snapshot representing a clear, warm day → grass type.
-final _warmClearWeather = WeatherData.fromJson({
-  'current_weather': {
-    'temperature': 25.0,
-    'windspeed': 8.0,
-    'weathercode': 0,
-    'is_day': 1,
-  },
-});
+/// Construct entity directly — test fixtures don't need JSON parsing.
+const _warmClearWeather = WeatherData(
+  temperature: 25.0,
+  windspeed: 8.0,
+  weathercode: 0,
+  isDay: true,
+);
 
 /// Builds [count] dummy [PokemonSummary] items named `pokemon-0`, `pokemon-1`, …
 List<PokemonSummary> _dummyPokemon(int count) => List.generate(

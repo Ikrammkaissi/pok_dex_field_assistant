@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pok_dex_field_assistant/app/app.dart';
 import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
-import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
+import 'package:pok_dex_field_assistant/app/di/bookmarks_di.dart';
 
 /// Starts the Flutter app with SharedPreferences injected into [ProviderScope].
 void main() async {

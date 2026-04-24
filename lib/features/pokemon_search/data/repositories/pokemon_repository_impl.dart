@@ -1,12 +1,15 @@
 /// Concrete implementation of [PokemonRepository] backed by [PokeApiHttpClient].
 ///
-/// Lives in the data layer — the only layer allowed to import [PokeApiHttpClient].
-/// The domain layer depends on the abstract [PokemonRepository] interface, not
-/// this class, so the HTTP implementation can be swapped without touching
-/// controllers or use cases.
+/// Lives in the data layer — the only layer allowed to import [PokeApiHttpClient]
+/// and JSON parsing mappers.  The domain layer depends on the abstract
+/// [PokemonRepository] interface, not this class, so the HTTP implementation
+/// can be swapped without touching controllers or use cases.
 import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/core/network/http_client.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_detail_mapper.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_list_page.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_detail.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/domain/repositories/pokemon_repository.dart';
 
 /// Implements [PokemonRepository] with paginated network calls to PokéAPI.
@@ -52,21 +55,20 @@ class PokemonRepositoryImpl implements PokemonRepository {
         /// Each entry contains the Pokémon name and its canonical API URL.
         final name = entry['name'] as String;
 
-        /// The URL encodes the numeric ID, e.g. `.../pokemon/1/` — used below
-        /// to build the sprite URL without parsing the detail response field.
+        /// The URL encodes the numeric ID — used below to build the sprite URL
+        /// without parsing the detail response field.
         final apiUrl = entry['url'] as String;
 
-        /// Fetch the detail to get types; sprite is derived from apiUrl instead.
+        /// Fetch the detail JSON; [PokemonDetailMapper] converts it to an entity.
         final detailJson = await _client.get('/pokemon/$name');
-        final detail = PokemonDetail.fromJson(detailJson);
+        final detail = PokemonDetailMapper.fromJson(detailJson);
 
         /// Build a lightweight summary for the list view.
+        /// Sprite URL derived from list-entry URL — no extra request.
         return PokemonSummary(
           id: detail.id,
           name: detail.name,
-          /// Derive sprite URL from the list-entry URL — no extra request.
           spriteUrl: _spriteUrlFromApiUrl(apiUrl),
-          /// Use the first type slot as the primary type for colour coding.
           primaryType: detail.types.isNotEmpty ? detail.types.first : '',
         );
       });
@@ -91,10 +93,6 @@ class PokemonRepositoryImpl implements PokemonRepository {
   /// Extracting the trailing numeric ID and inserting it into the GitHub raw
   /// sprites path gives the same URL as `sprites.front_default` in the detail
   /// response, without needing to parse that field.
-  ///
-  /// Example:
-  ///   `https://pokeapi.co/api/v2/pokemon/1/`
-  ///   → `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png`
   static String _spriteUrlFromApiUrl(String url) {
     /// Split on `/`, drop empty segments, take the last one — always the numeric ID.
     final id = url.split('/').where((s) => s.isNotEmpty).last;
@@ -107,9 +105,9 @@ class PokemonRepositoryImpl implements PokemonRepository {
   Future<PokemonDetail> getPokemonDetail(String nameOrId) async {
     AppLogger.debug(_tag, 'Fetching detail for "$nameOrId"');
     try {
-      /// Fetch and parse the detail JSON via the HTTP client.
+      /// Fetch the detail JSON; [PokemonDetailMapper] converts it to an entity.
       final json = await _client.get('/pokemon/$nameOrId');
-      final detail = PokemonDetail.fromJson(json);
+      final detail = PokemonDetailMapper.fromJson(json);
       AppLogger.debug(
           _tag, 'Loaded detail for "${detail.name}" (#${detail.id})');
       return detail;

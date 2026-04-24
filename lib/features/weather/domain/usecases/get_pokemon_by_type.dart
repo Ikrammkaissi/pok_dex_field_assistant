@@ -4,7 +4,7 @@
 /// [WeatherController] calls this after deriving the suggested type from
 /// weather conditions, keeping the presentation layer decoupled from
 /// the PokéAPI type-endpoint implementation.
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 import 'package:pok_dex_field_assistant/features/weather/domain/repositories/weather_repository.dart';
 
 /// Encapsulates the "fetch Pokémon of a specific type" operation.

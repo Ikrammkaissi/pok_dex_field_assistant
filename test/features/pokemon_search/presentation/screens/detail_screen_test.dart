@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_summary_mapper.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/move_entry.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_detail.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_detail/presentation/providers/pokemon_detail_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_detail/presentation/screens/detail_screen.dart';
@@ -55,7 +58,7 @@ Future<void> _pumpDetailScreen(
 }) async {
   SharedPreferences.setMockInitialValues({
     _bookmarkStorageKey: initialBookmarks
-        .map((p) => jsonEncode(p.toJson()))
+        .map((p) => jsonEncode(PokemonSummaryMapper.toBookmarkJson(p)))
         .toList(growable: false),
   });
   final prefs = await SharedPreferences.getInstance();

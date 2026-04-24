@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/screens/bookmarks_screen.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_summary_mapper.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _bookmarkStorageKey = 'pokemon_bookmarks';
@@ -23,7 +24,7 @@ Future<void> _pumpBookmarksScreen(
 }) async {
   SharedPreferences.setMockInitialValues({
     _bookmarkStorageKey: initialBookmarks
-        .map((p) => jsonEncode(p.toJson()))
+        .map((p) => jsonEncode(PokemonSummaryMapper.toBookmarkJson(p)))
         .toList(growable: false),
   });
   final prefs = await SharedPreferences.getInstance();
