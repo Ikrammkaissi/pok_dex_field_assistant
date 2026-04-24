@@ -70,7 +70,7 @@ lib/
 
 **APIs:** [PokéAPI v2](https://pokeapi.co) + [Open-Meteo](https://open-meteo.com) — both public, no auth.
 
----
+
 
 ## Tests
 
@@ -87,7 +87,32 @@ flutter test test/features/weather/
 ## What I'd Improve With More Time
 
 
-**1. Migrate `StateNotifier` → `Notifier` / `AsyncNotifier`**
+**1. Extendable to full Clean Architecture**
+No domain layer currently , models are simple enough to share across features. If the app grew , this structure slots in without rewriting anything:
+
+```
+features/pokemon_search/
+  data/
+    models/           ← raw API models (JSON shape)
+    repositories/
+      pokemon_repository_impl.dart   ← HTTP calls only
+  domain/
+    entities/
+      pokemon.dart    ← clean business objects, no JSON coupling
+    repositories/
+      pokemon_repository.dart  ← interface moves here (consumed by domain)
+    usecases/
+      search_pokemon.dart      ← one class, one operation
+      get_pokemon_detail.dart
+  presentation/
+    providers/        ← controllers call use cases, not repos directly
+    screens/
+    widgets/
+```
+
+---
+
+**2. Migrate `StateNotifier` → `Notifier` / `AsyncNotifier`**
 Riverpod 2.x deprecated `StateNotifier`. All three controllers need migration before the next major version breaks the upgrade path.
 
 **2. Add image caching with a size cap**
