@@ -123,8 +123,7 @@ Spacing, font sizes, and border radius are magic numbers scattered across widget
 **9. Accessibility**
 No `Semantics` labels on sprites, stat bars, or type chips. Screen readers get meaningless defaults. (Matters for public apps)
 
-**10. Sliding window was considered and removed**
-An earlier version capped the list at 180 items, evicting pages as the user scrolled. It was removed because ~1000 `PokemonSummary` objects total ≈ 100 KB — the memory problem didn't exist at this scale. The current append-only list is simpler and equally performant. A window would be justified if storing full `PokemonDetail` for all entries (~50 MB).
+
 
 
 
