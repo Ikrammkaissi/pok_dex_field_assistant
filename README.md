@@ -81,7 +81,6 @@ lib/
         screens/      # WeatherPokemonScreen
 ```
 
-**Dependency rule:** `presentation` calls use cases; use cases call repository interfaces; data layer implements those interfaces. Nothing imports outward.
 
 **State management:** Riverpod `StateNotifier`. Each feature owns its provider file.
 
