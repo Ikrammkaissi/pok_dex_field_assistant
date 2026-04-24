@@ -2,7 +2,7 @@
 /// All routes are defined here , widgets never reference path strings directly.
 import 'package:go_router/go_router.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/screens/bookmarks_screen.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/screens/detail_screen.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_detail/presentation/screens/detail_screen.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/screens/search_screen.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/screens/weather_pokemon_screen.dart';
 
