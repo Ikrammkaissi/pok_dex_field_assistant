@@ -58,8 +58,12 @@ lib/
         usecases/     # GetPokemonList, GetPokemonDetail
       presentation/
         providers/    # PokemonSearchController (StateNotifier), pokemonSearchControllerProvider
-        screens/      # SearchScreen, DetailScreen
-        widgets/      # PokemonListTile
+        screens/      # SearchScreen
+        widgets/      # PokemonListTile (shared — used by search, bookmarks, weather)
+    pokemon_detail/
+      presentation/
+        providers/    # pokemonDetailProvider, audioPlayerProvider
+        screens/      # DetailScreen
     bookmarks/
       data/
         repositories/ # BookmarkRepositoryImpl (SharedPreferences)
