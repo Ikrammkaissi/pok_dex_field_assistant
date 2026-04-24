@@ -3,7 +3,9 @@
 /// Lives in the domain layer so use cases and the notifier depend on this
 /// abstraction, not on the SharedPreferences implementation.
 /// Swap [BookmarkRepositoryImpl] for a fake in tests via Riverpod overrides.
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+///
+/// Imports only domain entities — zero data-layer or framework dependencies.
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 
 /// Interface that defines how bookmarks are read and written.
 /// Concrete implementations (e.g. [BookmarkRepositoryImpl]) live in the data layer.

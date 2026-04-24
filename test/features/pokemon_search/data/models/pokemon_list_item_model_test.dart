@@ -2,7 +2,8 @@
 /// All tests use static JSON maps , no network or Flutter dependencies.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_summary_mapper.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 
 void main() {
   /// Minimal valid JSON matching the shape of a `/pokemon/{name}` response.
@@ -25,7 +26,7 @@ void main() {
   group('PokemonSummary.fromJson', () {
     /// Happy-path: all required fields present with correct types.
     test('parses valid JSON correctly', () {
-      final model = PokemonSummary.fromJson(validJson);
+      final model = PokemonSummaryMapper.fromApiJson(validJson);
 
       expect(model.id, 1);
       expect(model.name, 'bulbasaur');
@@ -39,7 +40,7 @@ void main() {
         ...validJson,
         'sprites': {'front_default': null},
       };
-      final model = PokemonSummary.fromJson(json);
+      final model = PokemonSummaryMapper.fromApiJson(json);
 
       expect(model.spriteUrl, '');
       expect(model.primaryType, 'grass');
@@ -50,7 +51,7 @@ void main() {
       final json = Map<String, dynamic>.from(validJson)..remove('id');
 
       expect(
-        () => PokemonSummary.fromJson(json),
+        () => PokemonSummaryMapper.fromApiJson(json),
         throwsA(isA<ParseException>()),
       );
     });
@@ -60,7 +61,7 @@ void main() {
       final json = <String, dynamic>{...validJson, 'id': 'not-an-int'};
 
       expect(
-        () => PokemonSummary.fromJson(json),
+        () => PokemonSummaryMapper.fromApiJson(json),
         throwsA(isA<ParseException>()),
       );
     });
@@ -70,7 +71,7 @@ void main() {
       final json = Map<String, dynamic>.from(validJson)..remove('sprites');
 
       expect(
-        () => PokemonSummary.fromJson(json),
+        () => PokemonSummaryMapper.fromApiJson(json),
         throwsA(isA<ParseException>()),
       );
     });

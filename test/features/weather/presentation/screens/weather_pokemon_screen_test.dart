@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
-import 'package:pok_dex_field_assistant/features/weather/data/models/weather_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
+import 'package:pok_dex_field_assistant/features/weather/domain/entities/weather_data.dart';
 import 'package:pok_dex_field_assistant/features/weather/domain/repositories/weather_repository.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_providers.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/screens/weather_pokemon_screen.dart';
@@ -20,14 +20,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ---------------------------------------------------------------------------
 
 /// Clear-sky warm weather fixture → grass type suggestion.
-final _testWeather = WeatherData.fromJson({
-  'current_weather': {
-    'temperature': 25.0,
-    'windspeed': 8.0,
-    'weathercode': 0,
-    'is_day': 1,
-  },
-});
+/// Construct entity directly — test fixtures don't need JSON parsing.
+const _testWeather = WeatherData(
+  temperature: 25.0,
+  windspeed: 8.0,
+  weathercode: 0,
+  isDay: true,
+);
 
 /// Builds [count] dummy [PokemonSummary] items.
 List<PokemonSummary> _dummyPokemon(int count) => List.generate(

@@ -2,7 +2,9 @@
 /// All tests use static JSON maps , no network or Flutter dependencies.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_detail_mapper.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/move_entry.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_detail.dart';
 
 /// Minimal valid move entry JSON matching PokéAPI shape.
 Map<String, dynamic> _moveJson({
@@ -78,7 +80,7 @@ final _validJson = <String, dynamic>{
 void main() {
   group('MoveEntry.fromJson', () {
     test('parses name, method and level', () {
-      final entry = MoveEntry.fromJson(
+      final entry = PokemonDetailMapper.moveFromJson(
           _moveJson(name: 'ember', method: 'level-up', level: 7));
 
       expect(entry.name, 'ember');
@@ -88,7 +90,7 @@ void main() {
 
     test('level 0 for machine moves', () {
       final entry =
-          MoveEntry.fromJson(_moveJson(name: 'flamethrower', method: 'machine', level: 0));
+          PokemonDetailMapper.moveFromJson(_moveJson(name: 'flamethrower', method: 'machine', level: 0));
 
       expect(entry.learnMethod, 'machine');
       expect(entry.levelLearnedAt, 0);
@@ -112,7 +114,7 @@ void main() {
         ],
       };
 
-      final entry = MoveEntry.fromJson(json);
+      final entry = PokemonDetailMapper.moveFromJson(json);
       expect(entry.levelLearnedAt, 9);
     });
 
@@ -122,7 +124,7 @@ void main() {
         'version_group_details': [],
       };
 
-      final entry = MoveEntry.fromJson(json);
+      final entry = PokemonDetailMapper.moveFromJson(json);
       expect(entry.learnMethod, '');
       expect(entry.levelLearnedAt, 0);
     });
@@ -130,7 +132,7 @@ void main() {
 
   group('PokemonDetail.fromJson', () {
     test('parses core fields correctly', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
 
       expect(model.id, 6);
       expect(model.name, 'charizard');
@@ -140,7 +142,7 @@ void main() {
     });
 
     test('parses all four sprite URLs', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
 
       expect(model.spriteUrl, 'https://example.com/front.png');
       expect(model.backSpriteUrl, 'https://example.com/back.png');
@@ -149,7 +151,7 @@ void main() {
     });
 
     test('parses official artwork URLs', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
 
       expect(model.officialArtworkUrl, 'https://example.com/artwork.png');
       expect(model.officialArtworkShinyUrl,
@@ -167,7 +169,7 @@ void main() {
         },
       };
 
-      final model = PokemonDetail.fromJson(json);
+      final model = PokemonDetailMapper.fromJson(json);
       expect(model.officialArtworkUrl, 'https://example.com/front.png');
       expect(model.officialArtworkShinyUrl, 'https://example.com/front.png');
     });
@@ -184,14 +186,14 @@ void main() {
         },
       };
 
-      final model = PokemonDetail.fromJson(json);
+      final model = PokemonDetailMapper.fromJson(json);
       expect(model.backSpriteUrl, '');
       expect(model.frontShinySpriteUrl, '');
       expect(model.backShinySpriteUrl, '');
     });
 
     test('parses types in slot order', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
       expect(model.types, ['fire', 'flying']);
     });
 
@@ -202,24 +204,24 @@ void main() {
           {'type': {'name': 'psychic'}}
         ],
       };
-      expect(PokemonDetail.fromJson(json).types, ['psychic']);
+      expect(PokemonDetailMapper.fromJson(json).types, ['psychic']);
     });
 
     test('parses abilities in slot order with hidden flags', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
       expect(model.abilities.map((a) => a.name), ['blaze', 'solar-power']);
       expect(model.abilities.map((a) => a.isHidden), [false, true]);
     });
 
     test('parses stats map', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
       expect(model.stats['hp'], 78);
       expect(model.stats['attack'], 84);
       expect(model.stats.length, 2);
     });
 
     test('parses moves with correct count and types', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
 
       expect(model.moveCount, 3);
       expect(model.moves.length, 3);
@@ -228,7 +230,7 @@ void main() {
     });
 
     test('level-up moves have correct levels', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
       final scratch = model.moves.firstWhere((m) => m.name == 'scratch');
       final ember = model.moves.firstWhere((m) => m.name == 'ember');
 
@@ -237,7 +239,7 @@ void main() {
     });
 
     test('machine move has level 0', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
       final flamethrower =
           model.moves.firstWhere((m) => m.name == 'flamethrower');
 
@@ -247,28 +249,28 @@ void main() {
 
     test('empty moves list produces moveCount 0', () {
       final json = <String, dynamic>{..._validJson, 'moves': []};
-      expect(PokemonDetail.fromJson(json).moveCount, 0);
+      expect(PokemonDetailMapper.fromJson(json).moveCount, 0);
     });
 
     test('parses game_indices version names', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
       expect(model.gameIndices, ['red', 'blue', 'gold']);
     });
 
     test('empty game_indices produces empty list', () {
       final json = <String, dynamic>{..._validJson, 'game_indices': []};
-      expect(PokemonDetail.fromJson(json).gameIndices, isEmpty);
+      expect(PokemonDetailMapper.fromJson(json).gameIndices, isEmpty);
     });
 
     test('parses cry URLs', () {
-      final model = PokemonDetail.fromJson(_validJson);
+      final model = PokemonDetailMapper.fromJson(_validJson);
       expect(model.cryLatestUrl, 'https://example.com/cry_latest.ogg');
       expect(model.cryLegacyUrl, 'https://example.com/cry_legacy.ogg');
     });
 
     test('falls back to empty string when cries missing', () {
       final json = Map<String, dynamic>.from(_validJson)..remove('cries');
-      final model = PokemonDetail.fromJson(json);
+      final model = PokemonDetailMapper.fromJson(json);
 
       expect(model.cryLatestUrl, '');
       expect(model.cryLegacyUrl, '');
@@ -276,22 +278,22 @@ void main() {
 
     test('defaults base_experience to 0 when null', () {
       final json = <String, dynamic>{..._validJson, 'base_experience': null};
-      expect(PokemonDetail.fromJson(json).baseExperience, 0);
+      expect(PokemonDetailMapper.fromJson(json).baseExperience, 0);
     });
 
     test('throws ParseException when height is missing', () {
       final json = Map<String, dynamic>.from(_validJson)..remove('height');
-      expect(() => PokemonDetail.fromJson(json), throwsA(isA<ParseException>()));
+      expect(() => PokemonDetailMapper.fromJson(json), throwsA(isA<ParseException>()));
     });
 
     test('throws ParseException when types is not a list', () {
       final json = <String, dynamic>{..._validJson, 'types': 'not-a-list'};
-      expect(() => PokemonDetail.fromJson(json), throwsA(isA<ParseException>()));
+      expect(() => PokemonDetailMapper.fromJson(json), throwsA(isA<ParseException>()));
     });
 
     test('throws ParseException when stats is missing', () {
       final json = Map<String, dynamic>.from(_validJson)..remove('stats');
-      expect(() => PokemonDetail.fromJson(json), throwsA(isA<ParseException>()));
+      expect(() => PokemonDetailMapper.fromJson(json), throwsA(isA<ParseException>()));
     });
   });
 }

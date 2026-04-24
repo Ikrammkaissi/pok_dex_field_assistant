@@ -1,47 +1,18 @@
-/// Riverpod provider declarations for the bookmarks feature.
+/// Presentation-layer provider declarations for the bookmarks feature.
+///
+/// Infrastructure providers (SharedPreferences, repository, use cases) live in
+/// [lib/app/di/bookmarks_di.dart] — this file only wires the notifier and
+/// derived lookup providers.
 ///
 /// Dependency graph (left → right = depends on):
-///   sharedPreferencesProvider → bookmarkRepositoryProvider
-///   bookmarkRepositoryProvider → getBookmarksProvider, setBookmarksProvider
-///   getBookmarksProvider + setBookmarksProvider → bookmarkNotifierProvider
+///   (app/di) getBookmarksProvider + setBookmarksProvider → bookmarkNotifierProvider
 ///   bookmarkNotifierProvider → bookmarkedNamesProvider → isBookmarkedProvider
+export 'package:pok_dex_field_assistant/app/di/bookmarks_di.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pok_dex_field_assistant/features/bookmarks/data/repositories/bookmark_repository_impl.dart';
-import 'package:pok_dex_field_assistant/features/bookmarks/domain/repositories/bookmark_repository.dart';
-import 'package:pok_dex_field_assistant/features/bookmarks/domain/usecases/get_bookmarks.dart';
-import 'package:pok_dex_field_assistant/features/bookmarks/domain/usecases/set_bookmarks.dart';
+import 'package:pok_dex_field_assistant/app/di/bookmarks_di.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_notifier.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
-
-/// Holds the [SharedPreferences] instance initialised synchronously in [main].
-/// Always overridden before [runApp] so there is no async gap at startup.
-/// Throws [UnimplementedError] if accessed without an override — prevents
-/// silent failures in tests that forget to provide it.
-final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError(
-    'sharedPreferencesProvider must be overridden in ProviderScope.',
-  );
-});
-
-/// Provides the [BookmarkRepository] implementation.
-/// Declared as the abstract type so tests can inject a fake.
-final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
-  /// Wire the pre-initialised SharedPreferences instance into the impl.
-  return BookmarkRepositoryImpl(ref.watch(sharedPreferencesProvider));
-});
-
-/// Provides the [GetBookmarks] use case.
-/// [BookmarkNotifier] calls this on construction to hydrate its state from storage.
-final getBookmarksProvider = Provider<GetBookmarks>((ref) {
-  return GetBookmarks(ref.watch(bookmarkRepositoryProvider));
-});
-
-/// Provides the [SetBookmarks] use case.
-/// [BookmarkNotifier] calls this after every toggle to persist the full list.
-final setBookmarksProvider = Provider<SetBookmarks>((ref) {
-  return SetBookmarks(ref.watch(bookmarkRepositoryProvider));
-});
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 
 /// Provides [BookmarkNotifier] and exposes [List<PokemonSummary>] state.
 /// Use [bookmarkNotifierProvider.notifier] to call [BookmarkNotifier.toggle].
@@ -57,10 +28,7 @@ final bookmarkNotifierProvider =
 /// Derived provider — a [Set] of bookmarked Pokémon names for O(1) lookup.
 /// Recomputed only when the notifier's list changes; shared across all callers.
 final bookmarkedNamesProvider = Provider<Set<String>>((ref) {
-  return ref
-      .watch(bookmarkNotifierProvider)
-      .map((p) => p.name)
-      .toSet();
+  return ref.watch(bookmarkNotifierProvider).map((p) => p.name).toSet();
 });
 
 /// Derived family provider — true if the named Pokémon is currently bookmarked.

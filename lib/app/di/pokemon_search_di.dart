@@ -1,12 +1,11 @@
-/// Data-layer providers for the pokemon_search feature.
+/// Composition root for the pokemon_search and pokemon_detail features.
 ///
-/// Dependency graph (left → right = depends on):
+/// All infrastructure providers (HTTP client, repository impl) and
+/// domain use-case providers live here — never in presentation or domain layers.
+///
+/// Dependency graph:
 ///   httpClientProvider → pokemonRepositoryProvider
-///   pokemonRepositoryProvider → getPokemonListProvider
-///   pokemonRepositoryProvider → getPokemonDetailProvider
-///
-/// Presentation layer imports only the use-case providers; it never imports
-/// the repository or HTTP client providers directly.
+///   pokemonRepositoryProvider → getPokemonListProvider, getPokemonDetailProvider
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:pok_dex_field_assistant/core/network/http_client.dart';
@@ -17,7 +16,7 @@ import 'package:pok_dex_field_assistant/features/pokemon_search/domain/usecases/
 
 /// Provides a single shared [PokeApiHttpClient] backed by a real [http.Client].
 /// Override in tests with a fake client via [ProviderScope] overrides.
-/// [ref.onDispose] closes the underlying [http.Client] when the scope is destroyed.
+/// [ref.onDispose] closes the underlying connection pool when the scope is destroyed.
 final httpClientProvider = Provider<PokeApiHttpClient>((ref) {
   final client = http.Client();
   /// Release the connection pool when the provider scope is torn down.
@@ -26,7 +25,7 @@ final httpClientProvider = Provider<PokeApiHttpClient>((ref) {
 });
 
 /// Provides the [PokemonRepository] implementation.
-/// Declared as the abstract type so test overrides can inject a fake without
+/// Declared as the abstract domain type so tests can inject a fake without
 /// changing downstream providers.
 final pokemonRepositoryProvider = Provider<PokemonRepository>((ref) {
   /// Wire the shared HTTP client into the concrete implementation.
@@ -34,15 +33,15 @@ final pokemonRepositoryProvider = Provider<PokemonRepository>((ref) {
 });
 
 /// Provides the [GetPokemonList] use case.
-/// Controllers call this rather than the repository directly, keeping the
-/// presentation layer decoupled from the data layer.
+/// Presentation-layer controllers call this — never the repository directly.
+/// Keeps the controller decoupled from the data layer.
 final getPokemonListProvider = Provider<GetPokemonList>((ref) {
   return GetPokemonList(ref.watch(pokemonRepositoryProvider));
 });
 
 /// Provides the [GetPokemonDetail] use case.
-/// Used by [pokemonDetailProvider] in the pokemon_detail feature so the detail
-/// screen never imports data-layer types.
+/// Used by [pokemonDetailProvider] in the pokemon_detail feature.
+/// Injecting the use case prevents the detail screen from importing data types.
 final getPokemonDetailProvider = Provider<GetPokemonDetail>((ref) {
   return GetPokemonDetail(ref.watch(pokemonRepositoryProvider));
 });

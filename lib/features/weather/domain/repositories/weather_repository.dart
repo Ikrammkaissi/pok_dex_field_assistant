@@ -3,8 +3,10 @@
 /// Lives in the domain layer so use cases and [WeatherController] depend on
 /// this abstraction, not on the concrete Open-Meteo / PokéAPI implementation.
 /// Swap [WeatherRepositoryImpl] for a fake in tests via Riverpod overrides.
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
-import 'package:pok_dex_field_assistant/features/weather/data/models/weather_models.dart';
+///
+/// Imports only domain entities — zero data-layer or framework dependencies.
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
+import 'package:pok_dex_field_assistant/features/weather/domain/entities/weather_data.dart';
 
 /// Interface that defines how weather and type-filtered Pokémon are fetched.
 /// Concrete implementations (e.g. [WeatherRepositoryImpl]) live in the data layer.

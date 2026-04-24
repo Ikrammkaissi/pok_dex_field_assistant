@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/domain/usecases/get_bookmarks.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/domain/usecases/set_bookmarks.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 
 /// Manages the bookmark list as Riverpod state.
 /// State is a plain list ordered by insertion time.

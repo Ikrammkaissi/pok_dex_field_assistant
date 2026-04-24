@@ -9,7 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/core/utils/display_name.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_detail.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/move_entry.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_detail/presentation/providers/pokemon_detail_providers.dart';
 
 /// Stat display labels , prettier than the raw API stat names.

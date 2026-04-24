@@ -3,7 +3,7 @@
 /// Single-responsibility class that wraps [WeatherRepository.getCurrentWeather].
 /// [WeatherController] calls this instead of the repository directly, keeping
 /// the presentation layer decoupled from the Open-Meteo implementation.
-import 'package:pok_dex_field_assistant/features/weather/data/models/weather_models.dart';
+import 'package:pok_dex_field_assistant/features/weather/domain/entities/weather_data.dart';
 import 'package:pok_dex_field_assistant/features/weather/domain/repositories/weather_repository.dart';
 
 /// Encapsulates the "fetch current weather" operation.

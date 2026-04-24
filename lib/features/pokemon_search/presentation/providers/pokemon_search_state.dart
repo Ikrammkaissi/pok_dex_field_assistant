@@ -1,6 +1,6 @@
 /// Immutable state for the Pokémon search screen.
 /// All mutations go through [PokemonSearchController] , never mutated in place.
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 
 /// Represents every possible state the search screen can be in.
 class PokemonSearchState {

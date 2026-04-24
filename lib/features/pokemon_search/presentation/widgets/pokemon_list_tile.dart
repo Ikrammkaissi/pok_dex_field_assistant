@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pok_dex_field_assistant/app/router.dart';
 import 'package:pok_dex_field_assistant/core/utils/display_name.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/entities/pokemon_summary.dart';
 
 /// Card row for one [PokemonSummary] with an inline bookmark toggle.
 /// Uses [ConsumerWidget] to watch [isBookmarkedProvider] without lifting state.
