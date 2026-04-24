@@ -111,16 +111,16 @@ No `cached_network_image` — sprites re-fetch on rebuild. Would add it with a `
 **3. Offline mode**
 Browsing requires network. Would persist fetched Pokémon to Hive/SQLite with a background staleness refresh.
 
-**6. GPS auto-detect on weather screen**
+**4. GPS auto-detect on weather screen**
 User must type lat/lon manually. `geolocator` package would remove this friction entirely.
 
-**7. Dev / prod environment separation**
+**5. Dev / prod environment separation**
 API base URLs and log levels are hardcoded. Would add an `AppEnv` class reading `--dart-define` flags at compile time.
 
-**8. Design system**
+**6. Design system**
 Spacing, font sizes, and border radius are magic numbers scattered across widgets. Would extract a token layer and add a proper dark theme.
 
-**9. Accessibility**
+**7. Accessibility**
 No `Semantics` labels on sprites, stat bars, or type chips. Screen readers get meaningless defaults. (Matters for public apps)
 
 
