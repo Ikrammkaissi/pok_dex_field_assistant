@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pok_dex_field_assistant/features/bookmarks/data/bookmark_repository.dart';
+import 'package:pok_dex_field_assistant/features/bookmarks/domain/repositories/bookmark_repository.dart';
+import 'package:pok_dex_field_assistant/features/bookmarks/domain/usecases/get_bookmarks.dart';
+import 'package:pok_dex_field_assistant/features/bookmarks/domain/usecases/set_bookmarks.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_notifier.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 
@@ -49,6 +51,9 @@ class _FakeBookmarkRepository implements BookmarkRepository {
   }
 }
 
+BookmarkNotifier _makeNotifier(_FakeBookmarkRepository repo) =>
+    BookmarkNotifier(GetBookmarks(repo), SetBookmarks(repo));
+
 void main() {
   Future<void> flushLoad() async {
     await Future<void>.delayed(Duration.zero);
@@ -60,7 +65,7 @@ void main() {
         initial: const [_bulbasaur, _charmander],
       );
 
-      final notifier = BookmarkNotifier(repository);
+      final notifier = _makeNotifier(repository);
       await flushLoad();
 
       expect(notifier.state.map((p) => p.name), ['bulbasaur', 'charmander']);
@@ -68,7 +73,7 @@ void main() {
 
     test('toggle adds pokemon when it is not bookmarked', () async {
       final repository = _FakeBookmarkRepository();
-      final notifier = BookmarkNotifier(repository);
+      final notifier = _makeNotifier(repository);
       await flushLoad();
 
       await notifier.toggle(_bulbasaur);
@@ -80,7 +85,7 @@ void main() {
 
     test('toggle removes pokemon when it is bookmarked', () async {
       final repository = _FakeBookmarkRepository(initial: const [_bulbasaur]);
-      final notifier = BookmarkNotifier(repository);
+      final notifier = _makeNotifier(repository);
       await flushLoad();
 
       await notifier.toggle(_bulbasaur);
@@ -92,7 +97,7 @@ void main() {
 
     test('toggle does not create duplicate entries', () async {
       final repository = _FakeBookmarkRepository();
-      final notifier = BookmarkNotifier(repository);
+      final notifier = _makeNotifier(repository);
       await flushLoad();
 
       await notifier.toggle(_bulbasaur); // add

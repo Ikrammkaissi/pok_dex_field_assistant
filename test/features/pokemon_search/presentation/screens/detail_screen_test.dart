@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/features/bookmarks/presentation/providers/bookmark_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_detail/presentation/providers/pokemon_detail_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_providers.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/screens/detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';

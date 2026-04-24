@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
 import 'package:pok_dex_field_assistant/features/weather/data/models/weather_models.dart';
-import 'package:pok_dex_field_assistant/features/weather/data/weather_repository.dart';
+import 'package:pok_dex_field_assistant/features/weather/domain/repositories/weather_repository.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_controller.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_providers.dart';
 

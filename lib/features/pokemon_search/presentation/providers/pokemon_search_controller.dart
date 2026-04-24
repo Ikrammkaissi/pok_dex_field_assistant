@@ -1,11 +1,14 @@
-/// Search screen controller , owns async logic and state transitions.
-/// The UI layer reads state from Riverpod and calls methods here; it never
-/// talks to the repository directly.
+/// Search screen controller — owns async logic and state transitions.
+///
+/// The UI layer reads [PokemonSearchState] from Riverpod and calls methods here;
+/// it never imports repositories or use cases directly.
+/// The controller depends only on [GetPokemonList] (domain use case), keeping
+/// the presentation layer decoupled from the data layer.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/pokemon_repository.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/usecases/get_pokemon_list.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/presentation/providers/pokemon_search_state.dart';
 
 /// Number of Pokémon fetched on the first load.
@@ -22,20 +25,21 @@ const _minSearchResults = 20;
 /// During search, results are loaded from offset 0; clearing search reloads
 /// browse mode from scratch.
 class PokemonSearchController extends StateNotifier<PokemonSearchState> {
-  /// Logger tag for this class.
+  /// Logger tag used for all log lines emitted by this class.
   static const _tag = 'SearchController';
 
-  /// Repository injected by the Riverpod provider , mockable in tests.
-  final PokemonRepository _repository;
+  /// Use case that fetches one paginated page of Pokémon from PokéAPI.
+  final GetPokemonList _getPokemonList;
 
-  /// All Pokémon loaded so far. Grows on scroll, cleared on search/reload.
+  /// All Pokémon loaded so far. Grows on scroll; cleared on reload.
   final List<PokemonSummary> _items = [];
 
-  /// Tracks the in-flight init so concurrent callers share one future.
+  /// Tracks the in-flight init future so concurrent callers share one request.
   Future<void>? _ongoingInit;
 
-  /// Creates [PokemonSearchController] and fires the initial load immediately.
-  PokemonSearchController(this._repository)
+  /// Creates [PokemonSearchController] and fires the initial load immediately
+  /// so the search screen is populated as soon as the provider is first read.
+  PokemonSearchController(this._getPokemonList)
       : super(PokemonSearchState.initial()) {
     init();
   }
@@ -62,7 +66,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
     AppLogger.debug(_tag, 'loadMore , offset=$nextOffset, query="${state.query}"');
     state = state.copyWith(isLoadingMore: true);
     try {
-      final page = await _repository.getPokemonList(
+      final page = await _getPokemonList(
           limit: _pageSize, offset: nextOffset);
 
       _items.addAll(page.items);
@@ -130,7 +134,7 @@ class PokemonSearchController extends StateNotifier<PokemonSearchState> {
     _items.clear();
     state = PokemonSearchState.initial();
     try {
-      final page = await _repository.getPokemonList(
+      final page = await _getPokemonList(
           limit: _initialPageSize, offset: 0);
       _items.addAll(page.items);
       state = state.copyWith(

@@ -10,7 +10,8 @@ import 'package:http/http.dart' as http;
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 import 'package:pok_dex_field_assistant/core/network/http_client.dart';
 import 'package:pok_dex_field_assistant/core/network/weather_http_client.dart';
-import 'package:pok_dex_field_assistant/features/weather/data/weather_repository.dart';
+import 'package:pok_dex_field_assistant/features/weather/data/repositories/weather_repository_impl.dart';
+import 'package:pok_dex_field_assistant/features/weather/domain/repositories/weather_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Fixtures

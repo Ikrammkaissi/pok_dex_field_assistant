@@ -8,7 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pok_dex_field_assistant/core/error/exceptions.dart';
 import 'package:pok_dex_field_assistant/core/logging/app_logger.dart';
 import 'package:pok_dex_field_assistant/features/pokemon_search/data/models/pokemon_models.dart';
-import 'package:pok_dex_field_assistant/features/weather/data/weather_repository.dart';
+import 'package:pok_dex_field_assistant/features/weather/domain/usecases/get_current_weather.dart';
+import 'package:pok_dex_field_assistant/features/weather/domain/usecases/get_pokemon_by_type.dart';
 import 'package:pok_dex_field_assistant/features/weather/presentation/providers/weather_state.dart';
 
 /// Orchestrates weather fetch → type mapping → Pokémon list fetch.
@@ -26,20 +27,21 @@ class WeatherController extends StateNotifier<WeatherState> {
   /// Number of items from [_allPokemon] currently visible in [state.pokemon].
   int _visibleCount = 0;
 
-  /// Repository that supplies weather data and type-filtered Pokémon lists.
-  final WeatherRepository _repository;
+  /// Use case that fetches live weather from Open-Meteo for given coordinates.
+  final GetCurrentWeather _getCurrentWeather;
 
-  /// Generates a random latitude in the inhabited range [−60°, 70°].
-  static double _randomLat() =>
-      (math.Random().nextDouble() * 130) - 60;
+  /// Use case that fetches all Pokémon of a specific type from PokéAPI.
+  final GetPokemonByType _getPokemonByType;
 
-  /// Generates a random longitude in the full range [−180°, 180°].
-  static double _randomLon() =>
-      (math.Random().nextDouble() * 360) - 180;
+  /// Generates a random latitude within the inhabited range [−60°, 70°].
+  static double _randomLat() => (math.Random().nextDouble() * 130) - 60;
 
-  /// Creates a [WeatherController] with randomised coordinates and immediately
-  /// triggers the first fetch so the screen shows data as soon as it opens.
-  WeatherController(this._repository)
+  /// Generates a random longitude within the full valid range [−180°, 180°].
+  static double _randomLon() => (math.Random().nextDouble() * 360) - 180;
+
+  /// Creates [WeatherController] with randomised coordinates and immediately
+  /// triggers the first weather fetch so the screen shows data as soon as it opens.
+  WeatherController(this._getCurrentWeather, this._getPokemonByType)
       : super(WeatherState(lat: _randomLat(), lon: _randomLon())) {
     AppLogger.debug(_tag,
         'init , randomised coords lat=${state.lat.toStringAsFixed(4)}, lon=${state.lon.toStringAsFixed(4)}');
@@ -55,9 +57,9 @@ class WeatherController extends StateNotifier<WeatherState> {
   ///
   /// Flow:
   /// 1. Set loading state, preserving the active coordinates.
-  /// 2. Call [WeatherRepository.getCurrentWeather] with the coordinates.
-  /// 3. Derive suggested Pokémon type from [WeatherData.suggestedPokemonType].
-  /// 4. Call [WeatherRepository.getPokemonByType] with the derived type.
+  /// 2. Call [GetCurrentWeather] use case with the resolved coordinates.
+  /// 3. Derive the suggested Pokémon type from [WeatherData.suggestedPokemonType].
+  /// 4. Call [GetPokemonByType] use case with the derived type name.
   /// 5. Emit success state or error state on failure.
   Future<void> fetchWeatherSuggestions({
     double? lat,
@@ -105,19 +107,13 @@ class WeatherController extends StateNotifier<WeatherState> {
     state = WeatherState(isLoading: true, lat: useLat, lon: useLon);
 
     try {
-      /// Step 1: get current weather for the active coordinates.
-      final weather = await _repository.getCurrentWeather(
-        lat: useLat,
-        lon: useLon,
-      );
+      final weather = await _getCurrentWeather(lat: useLat, lon: useLon);
 
-      /// Step 2: derive the Pokémon type from the weather conditions.
       final type = weather.suggestedPokemonType;
       AppLogger.info(_tag,
           'weather fetched , condition="${weather.conditionLabel}", mapped type="$type"');
 
-      /// Step 3: fetch full Pokémon list for the derived type.
-      _allPokemon = await _repository.getPokemonByType(type);
+      _allPokemon = await _getPokemonByType(type);
 
       /// Show only the first page , user scrolls to load more.
       _visibleCount = math.min(_pageSize, _allPokemon.length);

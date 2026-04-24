@@ -5,7 +5,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:pok_dex_field_assistant/core/network/http_client.dart';
-import 'package:pok_dex_field_assistant/features/pokemon_search/data/pokemon_repository.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/data/repositories/pokemon_repository_impl.dart';
+import 'package:pok_dex_field_assistant/features/pokemon_search/domain/repositories/pokemon_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Static JSON fixtures
